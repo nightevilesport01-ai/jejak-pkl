@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Guru - JEJAK</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
+<main>
+  <h1>Dashboard Guru</h1>
+  <p class="redup">Siswa yang kamu bimbing.</p>
+  <div class="kartu" id="info">Memuat data...</div>
+  <div class="kartu redup">Jejak kegiatan, feedback, dan kehadiran siswa menyusul di halaman berikutnya.</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async () => {
+  if (!await wajibRole("guru")) return;
+  const el = document.getElementById("info");
+  const { data, error } = await db.from("students")
+    .select("nis, class_name, profiles!students_profile_id_fkey(full_name)");
+  if (error) { el.textContent = "Data belum bisa dimuat: " + error.message; return; }
+  if (!data.length) { el.textContent = "Belum ada siswa bimbingan. Minta admin menambahkannya."; return; }
+  el.textContent = "";
+  const ul = document.createElement("ul");
+  data.forEach(s => {
+    const li = document.createElement("li");
+    li.textContent = s.profiles.full_name + " (NIS " + s.nis + ", kelas " + s.class_name + ")";
+    ul.appendChild(li);
+  });
+  el.appendChild(ul);
+})();
+</script>
+</body>
+</html>

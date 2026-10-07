@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Admin - JEJAK</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
+<main>
+  <h1>Dashboard Admin</h1>
+  <p class="redup">Ringkasan data PKL.</p>
+  <div class="kartu" id="info">Memuat data...</div>
+  <div class="kartu redup">Halaman Data Siswa dan Penempatan menyusul. Untuk sementara, data diisi lewat dashboard Supabase.</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async () => {
+  if (!await wajibRole("admin")) return;
+  const el = document.getElementById("info");
+  const { count, error } = await db.from("students").select("id", { count: "exact", head: true });
+  el.textContent = error
+    ? "Data belum bisa dimuat: " + error.message
+    : "Siswa terdaftar: " + count;
+})();
+</script>
+</body>
+</html>

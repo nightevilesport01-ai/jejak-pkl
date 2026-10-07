@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Masuk - JEJAK</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><b>JEJAK</b></header>
+<main>
+  <h1>Masuk ke JEJAK</h1>
+  <p class="redup">Rekam perjalanan PKL kamu, dari kegiatan sampai laporan.</p>
+  <form id="form" class="kartu">
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="sandi">Password</label>
+    <input id="sandi" type="password" autocomplete="current-password" required>
+    <div id="pesan" class="galat" role="alert"></div>
+    <button id="tombol" type="submit">Masuk</button>
+  </form>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+const HALAMAN_ROLE = HALAMAN;
+
+// Sudah login sebelumnya? Langsung arahkan ke dashboard.
+(async () => {
+  const { data: { session } } = await db.auth.getSession();
+  if (session) {
+    const { data } = await db.from("profiles").select("role").eq("id", session.user.id).single();
+    if (data) location.href = HALAMAN_ROLE[data.role];
+  }
+})();
+
+document.getElementById("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const tombol = document.getElementById("tombol");
+  const pesan = document.getElementById("pesan");
+  pesan.textContent = "";
+  tombol.disabled = true;
+  tombol.textContent = "Memeriksa...";
+  const { data, error } = await db.auth.signInWithPassword({
+    email: document.getElementById("email").value.trim(),
+    password: document.getElementById("sandi").value
+  });
+  if (error) {
+    pesan.textContent = "Email atau password salah.";
+  } else {
+    const { data: p } = await db.from("profiles").select("role").eq("id", data.user.id).single();
+    if (p) { location.href = HALAMAN_ROLE[p.role]; return; }
+    await db.auth.signOut();
+    pesan.textContent = "Akun belum terdaftar di JEJAK. Hubungi admin.";
+  }
+  tombol.disabled = false;
+  tombol.textContent = "Masuk";
+});
+</script>
+</body>
+</html>

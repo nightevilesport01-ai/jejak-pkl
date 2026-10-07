@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Siswa - JEJAK</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
+<main>
+  <h1>Dashboard Siswa</h1>
+  <p class="redup">Data PKL kamu.</p>
+  <div class="kartu" id="info">Memuat data...</div>
+  <div class="kartu redup">Check-in, jurnal kegiatan, dan laporan menyusul di halaman berikutnya.</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async () => {
+  if (!await wajibRole("siswa")) return;
+  const el = document.getElementById("info");
+  const { data, error } = await db.from("students")
+    .select("nis, class_name, company_name, industry_supervisor").single();
+  el.textContent = error
+    ? "Data belum bisa dimuat: " + error.message
+    : "NIS " + data.nis + ", kelas " + data.class_name + ". PKL di " + data.company_name + " (pembimbing industri: " + data.industry_supervisor + ").";
+})();
+</script>
+</body>
+</html>
