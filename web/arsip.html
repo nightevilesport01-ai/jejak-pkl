@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bukti &amp; Arsip PKL - JEJAK</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  select, textarea { width:100%; padding:11px 12px; font:inherit; border:1px solid var(--garis); border-radius:6px; background:#fff; }
+  h2 { font-size:1.05rem; margin:22px 0 4px; color:var(--aksen); }
+  .ok { color:var(--aksen); font-weight:600; min-height:1.5em; margin-top:12px; }
+  .item { border-top:1px solid var(--garis); padding:10px 0; }
+  .item p { margin:2px 0; }
+  .kecil { color:var(--redup); font-size:.9rem; }
+  .tabs { display:flex; gap:8px; margin:14px 0 4px; }
+  .tab { background:#fff; color:var(--aksen); border:1px solid var(--aksen); }
+  .tab[aria-pressed="true"] { background:var(--aksen); color:#fff; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px; }
+  .grid figure { margin:0; }
+  .grid img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:6px; border:1px solid var(--garis); background:#fff; }
+  .grid figcaption { font-size:.85rem; color:var(--redup); margin-top:4px; }
+  .aksi a, .aksi button { display:inline-block; margin:6px 8px 0 0; padding:8px 14px; border-radius:6px; font:inherit; font-weight:600; text-decoration:none; }
+  .aksi a { background:var(--aksen); color:#fff; }
+  .aksi button.hapus { background:#fff; color:var(--galat); border:1px solid var(--galat); }
+</style>
+</head>
+<body>
+<header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
+<main>
+  <p><a href="siswa.html">&larr; Dashboard</a></p>
+  <h1>Bukti &amp; Arsip PKL</h1>
+  <p class="redup">Foto kegiatan dan dokumen PKL kamu tersimpan aman di satu tempat.</p>
+  <div class="tabs" role="group" aria-label="Pilih arsip">
+    <button type="button" id="btn-foto" class="tab" aria-pressed="true">Foto kegiatan</button>
+    <button type="button" id="btn-dok" class="tab" aria-pressed="false">Dokumen</button>
+  </div>
+
+  <section id="tab-foto">
+    <p class="redup">Foto kegiatan diambil saat mengisi <a href="jurnal.html">jurnal</a>, lalu otomatis tersimpan di sini. Ketuk foto untuk memperbesar.</p>
+    <div id="galeri" class="kartu">Memuat...</div>
+  </section>
+
+  <section id="tab-dok" hidden>
+  <p class="redup">Simpan foto atau PDF sertifikat, raport, lembar penilaian, dan dokumen PKL lainnya. Bisa dilihat olehmu dan guru pembimbingmu.</p>
+
+  <form id="form" class="kartu">
+    <label for="kategori">Jenis dokumen *</label>
+    <select id="kategori" required>
+      <option value="">Pilih...</option>
+      <option value="sertifikat">Sertifikat PKL</option>
+      <option value="raport">Raport PKL</option>
+      <option value="penilaian">Lembar Penilaian PKL</option>
+      <option value="surat">Surat/Dokumen PKL</option>
+      <option value="bukti">Bukti kegiatan</option>
+      <option value="laporan">Laporan PKL</option>
+      <option value="lainnya">Lainnya</option>
+    </select>
+    <label for="nama-dok">Nama dokumen *</label>
+    <input id="nama-dok" maxlength="120" required>
+    <label for="tanggal">Tanggal dokumen</label>
+    <input id="tanggal" type="date">
+    <label for="deskripsi">Keterangan</label>
+    <textarea id="deskripsi" rows="2"></textarea>
+    <label for="berkas">Foto atau PDF *</label>
+    <input id="berkas" type="file" accept="image/*,application/pdf" multiple required>
+    <p class="kecil">Boleh pilih beberapa halaman sekaligus. PDF maksimal 5 MB. Foto dikecilkan otomatis.</p>
+    <div id="pesan" class="galat" role="alert"></div>
+    <button id="simpan" type="submit">Simpan dokumen</button>
+  </form>
+
+  <div id="daftar" class="kartu">Memuat...</div>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+let siswaId = null;
+const $ = id => document.getElementById(id);
+const JENIS = { sertifikat: "Sertifikat PKL", raport: "Raport PKL", penilaian: "Lembar Penilaian PKL", surat: "Surat/Dokumen PKL", bukti: "Bukti kegiatan", laporan: "Laporan PKL", lainnya: "Lainnya" };
+const tglDok = d => new Date(d + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+const tglPanjang = d => new Date(d + "T00:00:00").toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+function tampil(nama) {
+  ["foto", "dok"].forEach(n => {
+    $("tab-" + n).hidden = n !== nama;
+    $("btn-" + n).setAttribute("aria-pressed", n === nama ? "true" : "false");
+  });
+}
+$("btn-foto").addEventListener("click", () => tampil("foto"));
+$("btn-dok").addEventListener("click", () => tampil("dok"));
+
+// Galeri foto kegiatan (diunggah lewat jurnal), dikelompokkan per tanggal
+async function muatFoto() {
+  const el = $("galeri");
+  const { data, error } = await db.from("journal_photos").select("id, file_url, journals(activity_date, activity_title)");
+  if (error) { el.textContent = "Foto belum bisa dimuat: " + error.message; return; }
+  if (!data.length) { el.textContent = "Belum ada foto. Tambahkan foto saat mengisi jurnal."; return; }
+  const { data: tautan, error: e2 } = await db.storage.from("bukti-jurnal").createSignedUrls(data.map(f => f.file_url), 3600);
+  if (e2) { el.textContent = "Foto belum bisa dibuka: " + e2.message; return; }
+  const url = {};
+  tautan.forEach(t => { url[t.path] = t.signedUrl; });
+  const grup = {};
+  data.forEach(f => { (grup[f.journals.activity_date] = grup[f.journals.activity_date] || []).push(f); });
+  el.textContent = "";
+  Object.keys(grup).sort().reverse().forEach(t => {
+    const h = document.createElement("h2");
+    h.textContent = tglPanjang(t);
+    el.appendChild(h);
+    const g = document.createElement("div");
+    g.className = "grid";
+    grup[t].forEach(f => {
+      if (!url[f.file_url]) return;
+      const fig = document.createElement("figure");
+      const a = document.createElement("a");
+      a.href = url[f.file_url]; a.target = "_blank"; a.rel = "noopener";
+      const img = document.createElement("img");
+      img.src = url[f.file_url]; img.loading = "lazy";
+      img.alt = "Foto kegiatan: " + f.journals.activity_title;
+      a.appendChild(img);
+      const cap = document.createElement("figcaption");
+      cap.textContent = f.journals.activity_title;
+      fig.appendChild(a); fig.appendChild(cap);
+      g.appendChild(fig);
+    });
+    el.appendChild(g);
+  });
+}
+
+// Isi nama dokumen otomatis dari jenis yang dipilih (boleh diubah)
+$("kategori").addEventListener("change", () => {
+  if (!$("nama-dok").value && $("kategori").value) $("nama-dok").value = JENIS[$("kategori").value];
+});
+
+// Foto dokumen dikecilkan (maks 2000 px) supaya tetap terbaca tapi hemat ruang
+async function kecilkan(file) {
+  const bmp = await createImageBitmap(file);
+  const skala = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * skala);
+  c.height = Math.round(bmp.height * skala);
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  return await new Promise(r => c.toBlob(r, "image/jpeg", 0.85));
+}
+
+async function muat() {
+  const { data, error } = await db.from("documents")
+    .select("id, document_name, category, file_path, mime_type, description, document_date")
+    .order("created_at", { ascending: false });
+  const el = $("daftar");
+  if (error) { el.textContent = "Dokumen belum bisa dimuat: " + error.message; return; }
+  if (!data.length) { el.textContent = "Belum ada dokumen tersimpan."; return; }
+  // Tautan sementara (1 jam) karena penyimpanan bersifat privat
+  const { data: tautan } = await db.storage.from("dokumen-pkl").createSignedUrls(data.map(d => d.file_path), 3600);
+  const url = {};
+  (tautan || []).forEach(t => { url[t.path] = t.signedUrl; });
+  el.textContent = "";
+  Object.keys(JENIS).forEach(k => {
+    const sub = data.filter(d => d.category === k);
+    if (!sub.length) return;
+    const h = document.createElement("h2");
+    h.textContent = JENIS[k] + " (" + sub.length + ")";
+    el.appendChild(h);
+    sub.forEach(d => {
+      const box = document.createElement("div");
+      box.className = "item";
+      const n = document.createElement("p"); n.style.fontWeight = "600"; n.textContent = d.document_name; box.appendChild(n);
+      if (d.document_date) { const p = document.createElement("p"); p.className = "kecil"; p.textContent = tglDok(d.document_date); box.appendChild(p); }
+      if (d.description) { const p = document.createElement("p"); p.textContent = d.description; box.appendChild(p); }
+      const aksi = document.createElement("div"); aksi.className = "aksi";
+      if (url[d.file_path]) {
+        const a = document.createElement("a");
+        a.href = url[d.file_path]; a.target = "_blank"; a.rel = "noopener"; a.textContent = "Buka";
+        aksi.appendChild(a);
+      }
+      const hapus = document.createElement("button");
+      hapus.type = "button"; hapus.className = "hapus"; hapus.textContent = "Hapus";
+      hapus.addEventListener("click", async () => {
+        if (!confirm("Hapus \"" + d.document_name + "\"? Dokumen yang dihapus tidak bisa dikembalikan.")) return;
+        hapus.disabled = true;
+        const { error: e1 } = await db.from("documents").delete().eq("id", d.id);
+        if (e1) { $("pesan").className = "galat"; $("pesan").textContent = "Gagal menghapus: " + e1.message; hapus.disabled = false; return; }
+        await db.storage.from("dokumen-pkl").remove([d.file_path]);
+        await muat();
+      });
+      aksi.appendChild(hapus);
+      box.appendChild(aksi);
+      el.appendChild(box);
+    });
+  });
+}
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const pesan = $("pesan"), tombol = $("simpan");
+  pesan.className = "galat"; pesan.textContent = "";
+  const files = Array.from($("berkas").files);
+  for (const f of files) {
+    if (f.type === "application/pdf" && f.size > 5 * 1024 * 1024) { pesan.textContent = "PDF \"" + f.name + "\" lebih dari 5 MB."; return; }
+    if (f.type !== "application/pdf" && !f.type.startsWith("image/")) { pesan.textContent = "File \"" + f.name + "\" bukan foto atau PDF."; return; }
+  }
+  tombol.disabled = true; tombol.textContent = "Menyimpan...";
+  let berhasil = 0, sebab = "";
+  for (let i = 0; i < files.length; i++) {
+    try {
+      const f = files[i];
+      const pdf = f.type === "application/pdf";
+      const blob = pdf ? f : await kecilkan(f);
+      const path = siswaId + "/" + crypto.randomUUID() + (pdf ? ".pdf" : ".jpg");
+      const { error: e1 } = await db.storage.from("dokumen-pkl").upload(path, blob, { contentType: pdf ? "application/pdf" : "image/jpeg" });
+      if (e1) throw e1;
+      const nama = $("nama-dok").value.trim() + (files.length > 1 ? " - hal. " + (i + 1) : "");
+      const { error: e2 } = await db.from("documents").insert({
+        student_id: siswaId, document_name: nama, category: $("kategori").value, file_path: path,
+        mime_type: pdf ? "application/pdf" : "image/jpeg",
+        description: $("deskripsi").value.trim() || null, document_date: $("tanggal").value || null
+      });
+      if (e2) { await db.storage.from("dokumen-pkl").remove([path]); throw e2; }
+      berhasil++;
+    } catch (err) { sebab = err.message || "file tidak bisa dibaca"; }
+  }
+  const gagal = berhasil < files.length;
+  pesan.className = gagal ? "galat" : "ok";
+  pesan.textContent = berhasil + " dari " + files.length + " file tersimpan." + (gagal ? " Penyebab: " + sebab : "");
+  if (berhasil) { $("form").reset(); await muat(); }
+  tombol.disabled = false; tombol.textContent = "Simpan dokumen";
+});
+
+(async () => {
+  if (!await wajibRole("siswa")) return;
+  const { data, error } = await db.from("students").select("id").single();
+  if (error) { $("daftar").textContent = "Data siswa belum bisa dimuat: " + error.message; return; }
+  siswaId = data.id;
+  await Promise.all([muat(), muatFoto()]);
+  if (location.hash === "#dokumen") tampil("dok");
+})();
+</script>
+</body>
+</html>

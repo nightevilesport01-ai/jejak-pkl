@@ -10,22 +10,123 @@
 <header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
 <main>
   <h1>Dashboard Siswa</h1>
-  <p class="redup">Data PKL kamu.</p>
+  <p class="redup">Data PKL dan kehadiran kamu.</p>
   <div class="kartu" id="info">Memuat data...</div>
-  <div class="kartu redup">Check-in, jurnal kegiatan, dan laporan menyusul di halaman berikutnya.</div>
+
+  <div class="kartu">
+    <b>Kehadiran hari ini</b>
+    <p id="status-hari-ini" class="redup">Memuat...</p>
+    <div id="aksi"></div>
+    <div id="pesan" class="galat" role="alert"></div>
+  </div>
+
+  <div class="kartu">
+    <b>Riwayat kehadiran</b>
+    <ul id="riwayat"></ul>
+  </div>
+
+  <div class="kartu"><b>Jurnal kegiatan</b><p class="redup">Catat kegiatan dan refleksi harianmu.</p><a href="jurnal.html" style="display:inline-block;background:#1F6F5C;color:#fff;padding:10px 16px;border-radius:6px;font-weight:600;text-decoration:none">Isi dan lihat jurnal</a></div>
+  <div class="kartu"><b>Bukti &amp; Arsip PKL</b><p class="redup">Foto kegiatan, sertifikat, raport, lembar penilaian, dan dokumen PKL lainnya.</p><a href="arsip.html" style="display:inline-block;padding:10px 16px;border-radius:6px;font-weight:600;text-decoration:none;margin:4px 8px 0 0;background:#1F6F5C;color:#fff">Buka arsip</a><a href="arsip.html#dokumen" style="display:inline-block;padding:10px 16px;border-radius:6px;font-weight:600;text-decoration:none;margin:4px 8px 0 0;background:#fff;color:#1F6F5C;border:1px solid #1F6F5C">Tambah dokumen</a></div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script>
+const WIT = "Asia/Jayapura"; // tanggal "hari ini" mengikuti aturan database (WIT)
+const LABEL = { "Asia/Jayapura": "WIT", "Asia/Makassar": "WITA", "Asia/Jakarta": "WIB" };
+let zona = WIT; // zona waktu tempat PKL siswa, diisi dari data siswa
+let siswaId = null;
+
+// Format tampilan: "Rab, 7 Okt" dan "07.30"
+const tgl = d => new Date(d + "T00:00:00").toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" });
+const jam = t => t ? new Date(t).toLocaleTimeString("id-ID", { timeZone: zona, hour: "2-digit", minute: "2-digit" }) : "-";
+const hariIniWIT = () => new Date().toLocaleDateString("sv-SE", { timeZone: WIT }); // bentuk 2026-10-07
+const pesan = t => { document.getElementById("pesan").textContent = t; };
+
+// Tombol yang dinonaktifkan sementara saat menyimpan (umpan balik loading)
+function buatTombol(teks, fn) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = teks;
+  b.addEventListener("click", async () => {
+    b.disabled = true;
+    b.textContent = "Menyimpan...";
+    await fn();
+    b.disabled = false;
+    b.textContent = teks;
+  });
+  return b;
+}
+
+// Check-in: server yang mengisi tanggal dan jam, aturan akses (RLS) memeriksa isinya
+async function catat(status, alasan) {
+  pesan("");
+  if (status !== "hadir" && !alasan.trim()) { pesan("Alasan wajib diisi untuk izin atau sakit."); return; }
+  const { error } = await db.from("attendance").insert({ student_id: siswaId, status: status, reason: alasan.trim() || null });
+  if (error) pesan(error.code === "23505" ? "Kehadiran hari ini sudah tercatat." : "Gagal menyimpan: " + error.message);
+  await muat();
+}
+
+// Check-out: lewat fungsi khusus di database (hanya mengisi jam pulang)
+async function pulang() {
+  pesan("");
+  const { error } = await db.rpc("absen_pulang");
+  if (error) pesan(error.message);
+  await muat();
+}
+
+// Ambil riwayat 14 hari terakhir, lalu tampilkan status dan tombol yang sesuai
+async function muat() {
+  const { data, error } = await db.from("attendance")
+    .select("attendance_date, status, check_in, check_out")
+    .order("attendance_date", { ascending: false }).limit(14);
+  if (error) { pesan("Kehadiran belum bisa dimuat: " + error.message); return; }
+
+  const ul = document.getElementById("riwayat");
+  ul.textContent = "";
+  data.forEach(r => {
+    const li = document.createElement("li");
+    li.textContent = tgl(r.attendance_date) + ": " + r.status + " (masuk " + jam(r.check_in) + ", pulang " + jam(r.check_out) + ")";
+    ul.appendChild(li);
+  });
+  if (!data.length) ul.textContent = "Belum ada catatan.";
+
+  const status = document.getElementById("status-hari-ini");
+  const aksi = document.getElementById("aksi");
+  aksi.textContent = "";
+  const h = data.find(r => r.attendance_date === hariIniWIT());
+
+  if (!h) {
+    status.textContent = "Kamu belum check-in hari ini.";
+    aksi.appendChild(buatTombol("Check-in (Hadir)", () => catat("hadir", "")));
+    const alasan = document.createElement("input");
+    alasan.placeholder = "Alasan (wajib untuk izin atau sakit)";
+    alasan.setAttribute("aria-label", "Alasan izin atau sakit");
+    alasan.style.margin = "14px 0 8px";
+    aksi.appendChild(alasan);
+    aksi.appendChild(buatTombol("Izin", () => catat("izin", alasan.value)));
+    aksi.append(" ");
+    aksi.appendChild(buatTombol("Sakit", () => catat("sakit", alasan.value)));
+  } else if (h.status === "hadir" && !h.check_out) {
+    status.textContent = "Hadir, masuk pukul " + jam(h.check_in) + " " + LABEL[zona] + ".";
+    aksi.appendChild(buatTombol("Check-out (Pulang)", pulang));
+  } else if (h.status === "hadir") {
+    status.textContent = "Hadir, masuk " + jam(h.check_in) + ", pulang " + jam(h.check_out) + " " + LABEL[zona] + ". Sampai besok!";
+  } else {
+    status.textContent = "Tercatat " + h.status + " hari ini.";
+  }
+}
+
 (async () => {
   if (!await wajibRole("siswa")) return;
-  const el = document.getElementById("info");
   const { data, error } = await db.from("students")
-    .select("nis, class_name, company_name, industry_supervisor").single();
-  el.textContent = error
-    ? "Data belum bisa dimuat: " + error.message
-    : "NIS " + data.nis + ", kelas " + data.class_name + ". PKL di " + data.company_name + " (pembimbing industri: " + data.industry_supervisor + ").";
+    .select("id, nis, class_name, company_name, industry_supervisor, zona_waktu").single();
+  const el = document.getElementById("info");
+  if (error) { el.textContent = "Data belum bisa dimuat: " + error.message; return; }
+  siswaId = data.id;
+  zona = data.zona_waktu || WIT;
+  el.textContent = "NIS " + data.nis + ", kelas " + data.class_name + ". PKL di " + data.company_name + " (pembimbing industri: " + data.industry_supervisor + ").";
+  await muat();
 })();
 </script>
 </body>

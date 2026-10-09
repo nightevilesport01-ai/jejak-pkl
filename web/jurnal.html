@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jurnal Kegiatan - JEJAK</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  textarea, select { width:100%; padding:11px 12px; font:inherit; border:1px solid var(--garis); border-radius:6px; background:#fff; }
+  textarea { min-height:84px; }
+  h2 { font-size:1.05rem; margin:22px 0 0; color:var(--aksen); }
+  .cek { display:flex; gap:10px; align-items:center; font-weight:400; margin:12px 0 0; }
+  .cek input { width:auto; }
+  .ok { color:var(--aksen); font-weight:600; min-height:1.5em; margin-top:12px; }
+  details { border-top:1px solid var(--garis); padding:10px 0; }
+  summary { cursor:pointer; font-weight:600; }
+  details p { margin:6px 0 0; }
+  .kecil { color:var(--redup); font-size:.9rem; }
+</style>
+</head>
+<body>
+<header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
+<main>
+  <p><a href="siswa.html">&larr; Dashboard</a></p>
+  <h1>Jurnal Kegiatan</h1>
+  <p class="redup">Catat kegiatan harianmu dan apa yang kamu pelajari. Isian bertanda * wajib.</p>
+
+  <form id="form" class="kartu">
+    <h2>A. Kegiatan</h2>
+    <label for="tanggal">Tanggal *</label>
+    <input id="tanggal" type="date" required>
+    <label for="judul">Judul kegiatan *</label>
+    <input id="judul" maxlength="120" required>
+    <label for="unit">Unit kerja *</label>
+    <input id="unit" maxlength="120" required>
+    <label for="dikerjakan">Apa yang dikerjakan *</label>
+    <textarea id="dikerjakan" required></textarea>
+
+    <h2>B. Refleksi</h2>
+    <label for="dipelajari">Apa yang dipelajari *</label>
+    <textarea id="dipelajari" required></textarea>
+    <label for="belum">Apa yang belum dipahami</label>
+    <textarea id="belum"></textarea>
+    <label for="menarik">Bagian yang paling menarik</label>
+    <textarea id="menarik"></textarea>
+    <label for="sulit">Bagian yang paling sulit</label>
+    <textarea id="sulit"></textarea>
+    <label for="paham">Tingkat pemahaman *</label>
+    <select id="paham" required>
+      <option value="">Pilih...</option>
+      <option value="belum_paham">Belum Paham</option>
+      <option value="cukup">Cukup</option>
+      <option value="paham">Paham</option>
+    </select>
+    <label for="perasaan">Perasaan terhadap kegiatan</label>
+    <select id="perasaan">
+      <option value="">Pilih...</option>
+      <option>Senang</option><option>Biasa saja</option><option>Lelah</option><option>Bingung</option>
+    </select>
+    <label class="cek"><input id="lanjut" type="checkbox"> Ingin belajar lebih lanjut</label>
+    <label class="cek"><input id="teruskan" type="checkbox"> Teruskan pertanyaan "belum dipahami" ke guru</label>
+
+    <h2>C. Foto / bukti kegiatan</h2>
+    <label for="foto">Tambah foto (maksimal 5)</label>
+    <input id="foto" type="file" accept="image/*" multiple>
+    <p class="kecil">Foto dikecilkan otomatis. Semua foto tersimpan di <a href="arsip.html">Bukti &amp; Arsip PKL</a>.</p>
+
+    <div id="pesan" class="galat" role="alert"></div>
+    <button id="simpan" type="submit">Simpan jurnal</button>
+  </form>
+
+  <h2>Riwayat jurnal</h2>
+  <div class="kartu" id="riwayat">Memuat...</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+let siswaId = null;
+const $ = id => document.getElementById(id);
+const TINGKAT = { belum_paham: "Belum paham", cukup: "Cukup", paham: "Paham" };
+const hariIni = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jayapura" });
+const tgl = d => new Date(d + "T00:00:00").toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+// Satu baris "Label: isi" (memakai textContent supaya aman dari XSS)
+function baris(induk, label, isi) {
+  if (!isi) return;
+  const p = document.createElement("p");
+  const b = document.createElement("b");
+  b.textContent = label + ": ";
+  p.appendChild(b);
+  p.appendChild(document.createTextNode(isi));
+  induk.appendChild(p);
+}
+
+// Kecilkan foto (maks 1280 px), unggah ke Storage, lalu catat di tabel journal_photos
+async function kecilkan(file) {
+  const bmp = await createImageBitmap(file);
+  const skala = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * skala);
+  c.height = Math.round(bmp.height * skala);
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  return await new Promise(r => c.toBlob(r, "image/jpeg", 0.8));
+}
+
+async function unggahFoto(jurnalId, files, sudahAda) {
+  const daftar = Array.from(files || []);
+  if (!daftar.length) return { gagal: true, pesan: "Pilih foto dulu." };
+  if (sudahAda + daftar.length > 5) return { gagal: true, pesan: "Maksimal 5 foto per jurnal (sudah ada " + sudahAda + ")." };
+  let berhasil = 0, sebab = "";
+  for (const f of daftar) {
+    try {
+      const blob = await kecilkan(f);
+      const path = siswaId + "/" + jurnalId + "/" + crypto.randomUUID() + ".jpg";
+      const { error: e1 } = await db.storage.from("bukti-jurnal").upload(path, blob, { contentType: "image/jpeg" });
+      if (e1) throw e1;
+      const { error: e2 } = await db.from("journal_photos").insert({ journal_id: jurnalId, file_url: path });
+      if (e2) throw e2;
+      berhasil++;
+    } catch (e) { sebab = e.message || "foto tidak bisa dibaca"; }
+  }
+  const gagal = berhasil < daftar.length;
+  return { gagal: gagal, pesan: berhasil + " dari " + daftar.length + " foto terunggah." + (gagal ? " Penyebab: " + sebab : "") };
+}
+
+async function muatRiwayat() {
+  const { data, error } = await db.from("journals")
+    .select("id, activity_date, activity_title, location, activity_description, what_learned, what_not_understood, interesting_part, difficult_part, understanding_level, want_to_learn_more, feeling, send_to_teacher, journal_photos(id)")
+    .order("activity_date", { ascending: false }).order("created_at", { ascending: false }).limit(30);
+  const el = $("riwayat");
+  if (error) { el.textContent = "Riwayat belum bisa dimuat: " + error.message; return; }
+  el.textContent = "";
+  if (!data.length) { el.textContent = "Belum ada jurnal. Isi jurnal pertamamu di atas."; return; }
+  if (!$("unit").value) $("unit").value = data[0].location || "";   // isi otomatis dari jurnal terakhir
+  data.forEach(j => {
+    const d = document.createElement("details");
+    const s = document.createElement("summary");
+    s.textContent = tgl(j.activity_date) + ": " + j.activity_title + " (" + TINGKAT[j.understanding_level] + ")";
+    d.appendChild(s);
+    baris(d, "Unit kerja", j.location);
+    baris(d, "Apa yang dikerjakan", j.activity_description);
+    baris(d, "Apa yang dipelajari", j.what_learned);
+    baris(d, "Belum dipahami", j.what_not_understood);
+    baris(d, "Paling menarik", j.interesting_part);
+    baris(d, "Paling sulit", j.difficult_part);
+    baris(d, "Perasaan", j.feeling);
+    baris(d, "Ingin belajar lebih lanjut", j.want_to_learn_more ? "Ya" : "");
+    baris(d, "Pertanyaan diteruskan ke guru", j.send_to_teacher ? "Ya" : "");
+    baris(d, "Foto", j.journal_photos.length ? j.journal_photos.length + " foto (lihat di Bukti & Arsip PKL)" : "");
+    const tambah = document.createElement("input");
+    tambah.type = "file"; tambah.accept = "image/*"; tambah.multiple = true;
+    tambah.setAttribute("aria-label", "Tambah foto untuk jurnal ini");
+    tambah.style.marginTop = "8px";
+    const bt = document.createElement("button");
+    bt.type = "button"; bt.textContent = "Tambah foto"; bt.style.marginTop = "8px";
+    const info = document.createElement("p");
+    info.setAttribute("role", "alert");
+    bt.addEventListener("click", async () => {
+      bt.disabled = true; bt.textContent = "Mengunggah...";
+      const h = await unggahFoto(j.id, tambah.files, j.journal_photos.length);
+      info.className = h.gagal ? "galat" : "ok";
+      info.textContent = h.pesan;
+      bt.disabled = false; bt.textContent = "Tambah foto";
+      if (!h.gagal) await muatRiwayat();
+    });
+    d.appendChild(tambah); d.appendChild(bt); d.appendChild(info);
+    el.appendChild(d);
+  });
+}
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const pesan = $("pesan"), tombol = $("simpan");
+  pesan.className = "galat"; pesan.textContent = "";
+  if ($("teruskan").checked && !$("belum").value.trim()) {
+    pesan.textContent = "Isi dulu bagian 'Apa yang belum dipahami' kalau ingin meneruskan pertanyaan ke guru.";
+    return;
+  }
+  tombol.disabled = true; tombol.textContent = "Menyimpan...";
+  const { data: baru, error } = await db.from("journals").insert({
+    student_id: siswaId,
+    activity_date: $("tanggal").value,
+    activity_title: $("judul").value.trim(),
+    location: $("unit").value.trim(),
+    activity_description: $("dikerjakan").value.trim(),
+    what_learned: $("dipelajari").value.trim(),
+    what_not_understood: $("belum").value.trim() || null,
+    interesting_part: $("menarik").value.trim() || null,
+    difficult_part: $("sulit").value.trim() || null,
+    understanding_level: $("paham").value,
+    want_to_learn_more: $("lanjut").checked,
+    feeling: $("perasaan").value || null,
+    send_to_teacher: $("teruskan").checked
+  }).select("id").single();
+  if (error) {
+    pesan.textContent = "Gagal menyimpan: " + error.message;
+  } else {
+    ["judul", "dikerjakan", "dipelajari", "belum", "menarik", "sulit"].forEach(i => { $(i).value = ""; });
+    $("paham").value = ""; $("perasaan").value = ""; $("lanjut").checked = false; $("teruskan").checked = false;
+    let teks = "Jurnal tersimpan.", adaGagal = false;
+    if ($("foto").files.length) {
+      const h = await unggahFoto(baru.id, $("foto").files, 0);
+      teks += " " + h.pesan; adaGagal = h.gagal; $("foto").value = "";
+    }
+    pesan.className = adaGagal ? "galat" : "ok"; pesan.textContent = teks;
+    await muatRiwayat();
+  }
+  tombol.disabled = false; tombol.textContent = "Simpan jurnal";
+});
+
+(async () => {
+  if (!await wajibRole("siswa")) return;
+  $("tanggal").value = hariIni();
+  $("tanggal").max = hariIni();
+  const { data, error } = await db.from("students").select("id").single();
+  if (error) { $("riwayat").textContent = "Data siswa belum bisa dimuat: " + error.message; return; }
+  siswaId = data.id;
+  await muatRiwayat();
+})();
+</script>
+</body>
+</html>
