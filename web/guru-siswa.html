@@ -16,6 +16,12 @@
   .ok { color:var(--aksen); font-weight:600; }
   .cek { display:flex; gap:10px; align-items:center; font-weight:400; margin:0 0 12px; }
   .cek input { width:auto; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px; }
+  .grid figure { margin:0; }
+  .grid img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:6px; border:1px solid var(--garis); background:#fff; }
+  .grid figcaption { font-size:.85rem; color:var(--redup); margin-top:4px; }
+  .dok { border-top:1px solid var(--garis); padding:8px 0; }
+  .dok p { margin:2px 0; }
 </style>
 </head>
 <body>
@@ -27,10 +33,24 @@
 
   <h2>Kehadiran (14 hari terakhir)</h2>
   <div class="kartu" id="hadir">Memuat...</div>
+  <div class="kartu">
+    <b>Catat Alpa</b>
+    <p class="redup">Untuk tanggal ketika siswa tidak check-in dan tidak izin atau sakit.</p>
+    <label for="tgl-alpa">Tanggal</label>
+    <input id="tgl-alpa" type="date">
+    <button id="btn-alpa" type="button" style="margin-top:12px">Catat Alpa</button>
+    <p id="info-alpa" role="alert"></p>
+  </div>
 
   <h2>Jurnal dan tanggapan</h2>
   <label class="cek"><input id="filter" type="checkbox"> Tampilkan hanya yang perlu ditanggapi</label>
   <div class="kartu" id="jurnal">Memuat...</div>
+
+  <h2>Foto kegiatan</h2>
+  <div class="kartu" id="foto">Memuat...</div>
+
+  <h2>Dokumen PKL (hanya lihat)</h2>
+  <div class="kartu" id="dok">Memuat...</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
@@ -120,10 +140,88 @@ async function muatJurnal() {
   tampilJurnal();
 }
 
+async function muatHadir() {
+  const { data: h, error } = await db.from("attendance")
+    .select("attendance_date, status, check_in, check_out").eq("student_id", idSiswa)
+    .order("attendance_date", { ascending: false }).limit(14);
+  if (error) { $("hadir").textContent = "Kehadiran belum bisa dimuat: " + error.message; return; }
+  if (!h.length) { $("hadir").textContent = "Belum ada catatan kehadiran."; return; }
+  const ul = document.createElement("ul");
+  h.forEach(r => {
+    const li = document.createElement("li");
+    li.textContent = tglPendek(r.attendance_date) + ": " + r.status + " (masuk " + jam(r.check_in) + ", pulang " + jam(r.check_out) + ")";
+    ul.appendChild(li);
+  });
+  $("hadir").textContent = ""; $("hadir").appendChild(ul);
+}
+
+// Alpa hanya bisa dicatat guru bimbingan (diperiksa juga oleh aturan akses di database)
+$("btn-alpa").addEventListener("click", async () => {
+  const info = $("info-alpa");
+  info.className = "galat"; info.textContent = "";
+  const tanggal = $("tgl-alpa").value;
+  if (!tanggal) { info.textContent = "Pilih tanggal dulu."; return; }
+  if (!confirm("Catat Alpa untuk " + tgl(tanggal) + "? Perubahan ini tidak bisa dibatalkan dari aplikasi.")) return;
+  const { error } = await db.from("attendance").insert({ student_id: idSiswa, attendance_date: tanggal, status: "alpa", check_in: null, set_by: guruId });
+  if (error) { info.textContent = error.code === "23505" ? "Siswa sudah punya catatan kehadiran pada tanggal itu." : "Gagal menyimpan: " + error.message; return; }
+  info.className = "ok"; info.textContent = "Alpa tercatat.";
+  await muatHadir();
+});
+
+// Foto kegiatan siswa (hanya lihat). Penyimpanan privat, jadi memakai tautan sementara 1 jam.
+async function muatFoto() {
+  const el = $("foto");
+  const { data, error } = await db.from("journal_photos")
+    .select("file_url, journals!inner(activity_date, activity_title, student_id)")
+    .eq("journals.student_id", idSiswa);
+  if (error) { el.textContent = "Foto belum bisa dimuat: " + error.message; return; }
+  if (!data.length) { el.textContent = "Siswa belum mengunggah foto kegiatan."; return; }
+  const { data: tautan, error: e2 } = await db.storage.from("bukti-jurnal").createSignedUrls(data.map(f => f.file_url), 3600);
+  if (e2) { el.textContent = "Foto belum bisa dibuka: " + e2.message; return; }
+  const url = {}; tautan.forEach(t => { url[t.path] = t.signedUrl; });
+  data.sort((a, b) => b.journals.activity_date.localeCompare(a.journals.activity_date));
+  el.textContent = "";
+  const g = document.createElement("div"); g.className = "grid";
+  data.forEach(f => {
+    if (!url[f.file_url]) return;
+    const fig = document.createElement("figure");
+    const a = document.createElement("a"); a.href = url[f.file_url]; a.target = "_blank"; a.rel = "noopener";
+    const img = document.createElement("img"); img.src = url[f.file_url]; img.loading = "lazy";
+    img.alt = "Foto kegiatan: " + f.journals.activity_title;
+    a.appendChild(img);
+    const cap = document.createElement("figcaption"); cap.textContent = tglPendek(f.journals.activity_date) + ": " + f.journals.activity_title;
+    fig.appendChild(a); fig.appendChild(cap); g.appendChild(fig);
+  });
+  el.appendChild(g);
+}
+
+// Dokumen PKL siswa (sertifikat, raport, lembar penilaian, dll.), hanya lihat
+const JENIS = { sertifikat: "Sertifikat PKL", raport: "Raport PKL", penilaian: "Lembar Penilaian PKL", surat: "Surat/Dokumen PKL", bukti: "Bukti kegiatan", laporan: "Laporan PKL", lainnya: "Lainnya" };
+async function muatDokumen() {
+  const el = $("dok");
+  const { data, error } = await db.from("documents")
+    .select("document_name, category, file_path, description, document_date")
+    .eq("student_id", idSiswa).order("created_at", { ascending: false });
+  if (error) { el.textContent = "Dokumen belum bisa dimuat: " + error.message; return; }
+  if (!data.length) { el.textContent = "Siswa belum menyimpan dokumen."; return; }
+  const { data: tautan } = await db.storage.from("dokumen-pkl").createSignedUrls(data.map(d => d.file_path), 3600);
+  const url = {}; (tautan || []).forEach(t => { url[t.path] = t.signedUrl; });
+  el.textContent = "";
+  data.forEach(d => {
+    const box = document.createElement("div"); box.className = "dok";
+    const n = document.createElement("p"); n.style.fontWeight = "600"; n.textContent = d.document_name + " (" + (JENIS[d.category] || d.category) + ")"; box.appendChild(n);
+    if (d.document_date) { const p = document.createElement("p"); p.className = "redup"; p.textContent = tgl(d.document_date); box.appendChild(p); }
+    if (d.description) { const p = document.createElement("p"); p.textContent = d.description; box.appendChild(p); }
+    if (url[d.file_path]) { const a = document.createElement("a"); a.href = url[d.file_path]; a.target = "_blank"; a.rel = "noopener"; a.textContent = "Buka dokumen"; box.appendChild(a); }
+    el.appendChild(box);
+  });
+}
+
 (async () => {
   if (!await wajibRole("guru")) return;
   const { data: { session } } = await db.auth.getSession();
   guruId = session.user.id;
+  $("tgl-alpa").max = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jayapura" });
   const { data: s, error } = await db.from("students")
     .select("nis, class_name, zona_waktu, profiles!students_profile_id_fkey(full_name)").eq("id", idSiswa).maybeSingle();
   if (error || !s) { $("judul").textContent = "Siswa tidak ditemukan"; $("hadir").textContent = "-"; $("jurnal").textContent = "-"; return; }
@@ -131,20 +229,8 @@ async function muatJurnal() {
   $("judul").textContent = s.profiles.full_name;
   $("sub").textContent = "NIS " + s.nis + ", kelas " + s.class_name + ". Jam ditampilkan dalam " + (LABEL[zona] || "") + ".";
 
-  const { data: h, error: e2 } = await db.from("attendance")
-    .select("attendance_date, status, check_in, check_out").eq("student_id", idSiswa)
-    .order("attendance_date", { ascending: false }).limit(14);
-  if (e2) { $("hadir").textContent = "Kehadiran belum bisa dimuat: " + e2.message; }
-  else if (!h.length) { $("hadir").textContent = "Belum ada catatan kehadiran."; }
-  else {
-    const ul = document.createElement("ul");
-    h.forEach(r => {
-      const li = document.createElement("li");
-      li.textContent = tglPendek(r.attendance_date) + ": " + r.status + " (masuk " + jam(r.check_in) + ", pulang " + jam(r.check_out) + ")";
-      ul.appendChild(li);
-    });
-    $("hadir").textContent = ""; $("hadir").appendChild(ul);
-  }
+  await muatHadir();
+  await Promise.all([muatFoto(), muatDokumen()]);
   $("filter").addEventListener("change", tampilJurnal);
   await muatJurnal();
 })();
