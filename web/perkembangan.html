@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perkembangan - JEJAK</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  h2 { font-size:1.05rem; margin:22px 0 8px; color:var(--aksen); }
+  .angka { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:10px; }
+  .angka .kartu { margin:0; text-align:center; }
+  .angka b { display:block; font-size:1.7rem; line-height:1.2; }
+  .angka .perlu b { color:var(--galat); }
+  .minggu { display:grid; grid-template-columns:120px 1fr 70px; gap:8px; align-items:center; margin:8px 0; font-size:.92rem; }
+  .bar { display:flex; height:28px; border-radius:6px; overflow:hidden; border:1px solid var(--garis); background:#fff; min-width:8px; }
+  .seg { display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.85rem; }
+  .legenda { display:flex; gap:14px; flex-wrap:wrap; margin:0 0 10px; font-size:.9rem; }
+  .legenda i { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:-1px; border:1px solid var(--garis); }
+  .daftar p { margin:6px 0; }
+  .daftar h3 { font-size:.98rem; margin:14px 0 4px; }
+  .daftar h3:first-child { margin-top:0; }
+</style>
+</head>
+<body>
+<header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
+<main>
+  <p><a id="kembali" href="siswa.html">&larr; Dashboard</a></p>
+  <h1 id="judul">Perkembangan</h1>
+  <p id="sub" class="redup">Dihitung dari jurnal dan kehadiran yang sudah dicatat.</p>
+
+  <h2>Ringkasan</h2>
+  <div id="ringkasan" class="angka"></div>
+
+  <h2>Jurnal dan tingkat pemahaman per minggu</h2>
+  <div class="kartu" id="mingguan">Memuat...</div>
+
+  <h2>Catatan dari jurnal</h2>
+  <div class="kartu daftar" id="catatan">Memuat...</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const TINGKAT = { belum_paham: "Belum paham", cukup: "Cukup", paham: "Paham" };
+const WARNA = { belum_paham: "#F3C6C2", cukup: "#F6E3A6", paham: "#BFE3D3" };
+const tgl = d => new Date(d + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+function el(tag, teks, kelas) { const e = document.createElement(tag); if (teks != null) e.textContent = teks; if (kelas) e.className = kelas; return e; }
+
+// Hari Senin dari minggu sebuah tanggal (minggu dihitung Senin sampai Minggu)
+function senin(iso) {
+  const d = new Date(iso + "T00:00:00");
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.toLocaleDateString("sv-SE");
+}
+function tambahHari(iso, n) { const d = new Date(iso + "T00:00:00"); d.setDate(d.getDate() + n); return d.toLocaleDateString("sv-SE"); }
+
+function angka(label, nilai, perlu) {
+  const k = el("div", null, "kartu" + (perlu ? " perlu" : ""));
+  k.appendChild(el("b", String(nilai)));
+  k.appendChild(el("span", label, "redup"));
+  $("ringkasan").appendChild(k);
+}
+
+function mingguan(jurnal) {
+  const box = $("mingguan");
+  box.textContent = "";
+  if (!jurnal.length) { box.textContent = "Belum ada jurnal."; return; }
+  const per = {};
+  jurnal.forEach(j => {
+    const m = senin(j.activity_date);
+    per[m] = per[m] || { belum_paham: 0, cukup: 0, paham: 0 };
+    per[m][j.understanding_level]++;
+  });
+  const urut = Object.keys(per).sort();
+  const minggu = [];
+  for (let m = urut[0]; m <= urut[urut.length - 1]; m = tambahHari(m, 7)) minggu.push(m);
+  const jumlah = m => per[m] ? per[m].belum_paham + per[m].cukup + per[m].paham : 0;
+  const maks = Math.max(...minggu.map(jumlah));
+
+  const leg = el("div", null, "legenda");
+  Object.keys(TINGKAT).forEach(k => { const s = el("span"); const i = el("i"); i.style.background = WARNA[k]; s.appendChild(i); s.appendChild(document.createTextNode(TINGKAT[k])); leg.appendChild(s); });
+  box.appendChild(leg);
+
+  minggu.forEach(m => {
+    const baris = el("div", null, "minggu");
+    baris.appendChild(el("div", tgl(m) + " - " + tgl(tambahHari(m, 6))));
+    const bar = el("div", null, "bar");
+    const n = jumlah(m), p = per[m];
+    bar.style.width = n ? Math.max(12, Math.round(n / maks * 100)) + "%" : "8px";
+    if (n) {
+      bar.setAttribute("role", "img");
+      bar.setAttribute("aria-label", Object.keys(TINGKAT).map(k => TINGKAT[k] + " " + p[k]).join(", "));
+      Object.keys(TINGKAT).forEach(k => { if (p[k]) { const s = el("span", String(p[k]), "seg"); s.style.flex = String(p[k]); s.style.background = WARNA[k]; s.title = TINGKAT[k]; bar.appendChild(s); } });
+    }
+    baris.appendChild(bar);
+    baris.appendChild(el("div", n + " jurnal"));
+    box.appendChild(baris);
+  });
+}
+
+function catatan(jurnal) {
+  const box = $("catatan");
+  box.textContent = "";
+  const terbaru = [...jurnal].sort((a, b) => b.activity_date.localeCompare(a.activity_date));
+  const bagian = (judul, kolom) => {
+    const isi = terbaru.filter(j => j[kolom]).slice(0, 5);
+    box.appendChild(el("h3", judul));
+    if (!isi.length) { box.appendChild(el("p", "Belum ada.", "redup")); return; }
+    isi.forEach(j => box.appendChild(el("p", tgl(j.activity_date) + ", " + j.activity_title + ": " + j[kolom])));
+  };
+  bagian("Yang belum dipahami (5 terbaru)", "what_not_understood");
+  bagian("Bagian paling sulit (5 terbaru)", "difficult_part");
+  bagian("Bagian paling menarik (5 terbaru)", "interesting_part");
+  const rasa = {};
+  jurnal.forEach(j => { if (j.feeling) rasa[j.feeling] = (rasa[j.feeling] || 0) + 1; });
+  box.appendChild(el("h3", "Perasaan terhadap kegiatan"));
+  box.appendChild(el("p", Object.keys(rasa).length ? Object.keys(rasa).map(k => k + " " + rasa[k]).join(", ") : "Belum ada.", Object.keys(rasa).length ? "" : "redup"));
+}
+
+(async () => {
+  const p = await ambilProfil();
+  if (!p) return;
+  let idSiswa;
+  $("nama").textContent = p.full_name;
+  if (p.role === "siswa") {
+    const { data, error } = await db.from("students").select("id").single();
+    if (error) { $("mingguan").textContent = "Data belum bisa dimuat: " + error.message; return; }
+    idSiswa = data.id;
+    $("judul").textContent = "Perkembangan Saya";
+  } else if (p.role === "guru") {
+    idSiswa = new URLSearchParams(location.search).get("id");
+    const { data: s } = await db.from("students").select("profiles!students_profile_id_fkey(full_name)").eq("id", idSiswa || "").maybeSingle();
+    if (!s) { $("judul").textContent = "Siswa tidak ditemukan"; $("mingguan").textContent = "-"; $("catatan").textContent = "-"; return; }
+    $("judul").textContent = "Perkembangan " + s.profiles.full_name;
+    $("kembali").href = "guru-siswa.html?id=" + encodeURIComponent(idSiswa);
+    $("kembali").textContent = "\u2190 Detail siswa";
+  } else { location.href = HALAMAN[p.role]; return; }
+
+  const [jr, ab] = await Promise.all([
+    db.from("journals").select("activity_date, activity_title, understanding_level, feeling, want_to_learn_more, send_to_teacher, what_not_understood, difficult_part, interesting_part, feedback(id)").eq("student_id", idSiswa).limit(1000),
+    db.from("attendance").select("status").eq("student_id", idSiswa).limit(1000)
+  ]);
+  const galat = jr.error || ab.error;
+  if (galat) { $("mingguan").textContent = "Data belum bisa dimuat: " + galat.message; return; }
+
+  const hitung = s => ab.data.filter(a => a.status === s).length;
+  const belumDijawab = jr.data.filter(j => j.send_to_teacher && !j.feedback.length).length;
+  angka("Jurnal", jr.data.length);
+  angka("Hadir", hitung("hadir")); angka("Izin", hitung("izin")); angka("Sakit", hitung("sakit")); angka("Alpa", hitung("alpa"));
+  angka("Ingin belajar lebih lanjut", jr.data.filter(j => j.want_to_learn_more).length);
+  angka("Pertanyaan belum dijawab", belumDijawab, belumDijawab > 0);
+  mingguan(jr.data);
+  catatan(jr.data);
+})();
+</script>
+</body>
+</html>

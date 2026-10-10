@@ -30,6 +30,7 @@
   <p><a href="guru.html">&larr; Dashboard</a></p>
   <h1 id="judul">Detail Siswa</h1>
   <p id="sub" class="redup"></p>
+  <p><a id="lihat-kembang" href="#" style="font-weight:600">Lihat perkembangan siswa &rarr;</a></p>
 
   <h2>Kehadiran (14 hari terakhir)</h2>
   <div class="kartu" id="hadir">Memuat...</div>
@@ -227,6 +228,7 @@ async function muatDokumen() {
   if (error || !s) { $("judul").textContent = "Siswa tidak ditemukan"; $("hadir").textContent = "-"; $("jurnal").textContent = "-"; return; }
   zona = s.zona_waktu;
   $("judul").textContent = s.profiles.full_name;
+  $("lihat-kembang").href = "perkembangan.html?id=" + encodeURIComponent(idSiswa);
   $("sub").textContent = "NIS " + s.nis + ", kelas " + s.class_name + ". Jam ditampilkan dalam " + (LABEL[zona] || "") + ".";
 
   await muatHadir();
