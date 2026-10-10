@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cetak Dokumen - JEJAK</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  main { max-width:900px; }
+  .pilih { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+  .pilih .tab { background:#fff; color:var(--aksen); border:1px solid var(--aksen); }
+  .pilih .tab[aria-pressed="true"] { background:var(--aksen); color:#fff; }
+  #dokumen { background:#fff; border:1px solid var(--garis); padding:16px; overflow-x:auto; font-family:Arial, Helvetica, sans-serif; font-size:12pt; color:#000; }
+  #dokumen h2.judul { text-align:center; font-size:14pt; margin:0 0 16px; }
+  #dokumen table { border-collapse:collapse; width:100%; }
+  #dokumen table.info { margin-bottom:14px; }
+  #dokumen table.info td { padding:2px 4px 2px 0; vertical-align:top; }
+  #dokumen table.info td:first-child { width:34%; }
+  #dokumen table.data th, #dokumen table.data td, #dokumen table.ttd th, #dokumen table.ttd td { border:1px solid #000; padding:4px 6px; font-size:11pt; vertical-align:top; }
+  #dokumen table.data th { text-align:center; }
+  #dokumen td { white-space:pre-line; }
+  #dokumen table.ttd td.ruang { height:80px; }
+  #dokumen table.ttd td.nama { text-align:center; }
+  #dokumen .kanan { text-align:right; margin:18px 0 6px; }
+  #dokumen .catatan { font-size:10pt; margin:8px 0 0; }
+  .tips { font-size:.9rem; }
+  @page { size:A4; margin:3cm 3cm 3cm 4cm; }
+  @media print {
+    header, .tidak-cetak { display:none !important; }
+    body { background:#fff; }
+    main { max-width:none; padding:0; }
+    #dokumen { border:0; padding:0; overflow:visible; }
+    #dokumen table.data tr, #dokumen table.ttd { page-break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+<header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
+<main>
+  <div class="tidak-cetak">
+    <p><a href="siswa.html">&larr; Dashboard</a></p>
+    <h1>Cetak Dokumen</h1>
+    <p class="redup">Dokumen dalam format sekolah, terisi otomatis dari data JEJAK. Cetak, lalu minta tanda tangan pembimbing.</p>
+    <div class="pilih" role="group" aria-label="Pilih dokumen">
+      <button type="button" id="btn-hadir" class="tab" aria-pressed="true">Daftar Hadir</button>
+      <button type="button" id="btn-giat" class="tab" aria-pressed="false">Daftar Kegiatan Harian</button>
+      <button type="button" id="btn-cetak">Cetak / Simpan PDF</button>
+    </div>
+    <p class="redup tips">Di jendela cetak: pilih <b>Simpan sebagai PDF</b>, ukuran <b>A4</b>, dan margin <b>Default</b> supaya mengikuti format sekolah. Kolom paraf dan catatan dikosongkan untuk diisi tangan oleh pembimbing.</p>
+  </div>
+  <div id="dokumen">Memuat data...</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const JADWAL = { senin_jumat: [1, 2, 3, 4, 5], senin_sabtu: [1, 2, 3, 4, 5, 6], setiap_hari: [0, 1, 2, 3, 4, 5, 6] };
+const LABEL = { "Asia/Jayapura": "WIT", "Asia/Makassar": "WITA", "Asia/Jakarta": "WIB" };
+let s = null, namaSiswa = "", guru = "", rekam = {}, jurnal = [];
+
+const hariIni = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jayapura" });
+const hari = iso => HARI[new Date(iso + "T00:00:00").getDay()];
+const fmt = iso => iso.split("-").reverse().join("-");
+const jam = t => t ? new Date(t).toLocaleTimeString("id-ID", { timeZone: s.zona_waktu, hour: "2-digit", minute: "2-digit" }).replace(".", ":") + " " + LABEL[s.zona_waktu] : "";
+function rentang(a, b) {
+  const out = [], d = new Date(a + "T00:00:00"), e = new Date(b + "T00:00:00");
+  while (d <= e) { out.push(d.toLocaleDateString("sv-SE")); d.setDate(d.getDate() + 1); }
+  return out;
+}
+function el(tag, teks, kelas) {
+  const e = document.createElement(tag);
+  if (teks != null) e.textContent = teks;
+  if (kelas) e.className = kelas;
+  return e;
+}
+function tabel(kolom, baris) {
+  const t = el("table", null, "data");
+  const h = el("tr");
+  kolom.forEach(k => h.appendChild(el("th", k)));
+  t.appendChild(h);
+  baris.forEach(r => { const tr = el("tr"); r.forEach(c => tr.appendChild(el("td", c))); t.appendChild(tr); });
+  return t;
+}
+function kepala(judul) {
+  const box = el("div");
+  box.appendChild(el("h2", judul, "judul"));
+  const t = el("table", null, "info");
+  [["Nama Peserta Didik", namaSiswa], ["Kelas", s.class_name], ["Tempat PKL", s.company_name],
+   ["Nama Pembimbing Dunia Kerja", s.industry_supervisor], ["Nama Pembimbing Sekolah", guru]].forEach(([a, b]) => {
+    const tr = el("tr"); tr.appendChild(el("td", a)); tr.appendChild(el("td", ": " + (b || ""))); t.appendChild(tr);
+  });
+  box.appendChild(t);
+  return box;
+}
+function tandaTangan() {
+  const box = el("div");
+  box.appendChild(el("p", "Sorong, ......................................", "kanan"));
+  const t = el("table", null, "ttd");
+  const r1 = el("tr"), r2 = el("tr"), r3 = el("tr");
+  [["Dibuat,\nPeserta Didik", namaSiswa], ["Diperiksa,\nPembimbing Dunia Kerja", s.industry_supervisor], ["Divalidasi,\nPembimbing Sekolah", guru]].forEach(([a, b]) => {
+    const th = el("th", a); th.style.textAlign = "center"; r1.appendChild(th);
+    r2.appendChild(el("td", "", "ruang"));
+    r3.appendChild(el("td", b || "..............................", "nama"));
+  });
+  [r1, r2, r3].forEach(r => t.appendChild(r));
+  box.appendChild(t);
+  return box;
+}
+
+function daftarHadir() {
+  const akhir = s.pkl_end_date && s.pkl_end_date < hariIni ? s.pkl_end_date : hariIni;
+  const harianKerja = JADWAL[s.jadwal_kerja] || JADWAL.senin_jumat;
+  const tanggal = new Set(s.pkl_start_date
+    ? rentang(s.pkl_start_date, akhir).filter(d => harianKerja.includes(new Date(d + "T00:00:00").getDay())) : []);
+  Object.keys(rekam).forEach(d => tanggal.add(d));
+  const baris = Array.from(tanggal).sort().map((d, i) => {
+    const a = rekam[d];
+    let ket = "";
+    if (a && a.status !== "hadir") ket = a.status.charAt(0).toUpperCase() + a.status.slice(1) + (a.reason ? ": " + a.reason : "");
+    return [String(i + 1), hari(d) + ", " + fmt(d), a ? jam(a.check_in) : "", "", a ? jam(a.check_out) : "", "", ket];
+  });
+  const box = kepala("DAFTAR HADIR PESERTA PRAKTIK KERJA LAPANGAN (PKL)");
+  box.appendChild(tabel(["NO.", "HARI, TANGGAL", "JAM MASUK", "PARAF", "JAM PULANG", "PARAF", "KETERANGAN"], baris));
+  box.appendChild(el("p", "Hari tanpa catatan dibiarkan kosong; keterangan diisi oleh pembimbing.", "catatan"));
+  box.appendChild(tandaTangan());
+  return box;
+}
+
+function daftarKegiatan() {
+  const baris = jurnal.map((j, i) => [String(i + 1), hari(j.activity_date) + ", " + fmt(j.activity_date),
+    (j.location ? j.location + "\n" : "") + j.activity_description, ""]);
+  const box = kepala("DAFTAR KEGIATAN HARIAN PESERTA PRAKTIK KERJA LAPANGAN (PKL)");
+  box.appendChild(tabel(["No.", "Hari/Tanggal", "Unit Kerja / Pekerjaan", "Catatan*"], baris));
+  box.appendChild(el("p", "*) Catatan diberikan oleh pembimbing dunia kerja pada setiap kegiatan atau waktu tertentu.", "catatan"));
+  box.appendChild(tandaTangan());
+  return box;
+}
+
+function tampil(jenis) {
+  $("btn-hadir").setAttribute("aria-pressed", jenis === "hadir" ? "true" : "false");
+  $("btn-giat").setAttribute("aria-pressed", jenis === "giat" ? "true" : "false");
+  $("dokumen").textContent = "";
+  $("dokumen").appendChild(jenis === "hadir" ? daftarHadir() : daftarKegiatan());
+}
+
+$("btn-hadir").addEventListener("click", () => tampil("hadir"));
+$("btn-giat").addEventListener("click", () => tampil("giat"));
+$("btn-cetak").addEventListener("click", () => window.print());
+
+(async () => {
+  const profil = await wajibRole("siswa");
+  if (!profil) return;
+  namaSiswa = profil.full_name;
+  const [st, ab, jr] = await Promise.all([
+    db.from("students").select("id, class_name, company_name, industry_supervisor, pkl_start_date, pkl_end_date, zona_waktu, jadwal_kerja, profiles!students_guru_id_fkey(full_name)").single(),
+    db.from("attendance").select("attendance_date, status, reason, check_in, check_out").order("attendance_date").limit(500),
+    db.from("journals").select("activity_date, location, activity_description").order("activity_date").order("created_at").limit(500)
+  ]);
+  const galat = st.error || ab.error || jr.error;
+  if (galat) { $("dokumen").textContent = "Data belum bisa dimuat: " + galat.message; return; }
+  s = st.data;
+  guru = s.profiles ? s.profiles.full_name : "";
+  ab.data.forEach(a => { rekam[a.attendance_date] = a; });
+  jurnal = jr.data;
+  tampil("hadir");
+})();
+</script>
+</body>
+</html>
