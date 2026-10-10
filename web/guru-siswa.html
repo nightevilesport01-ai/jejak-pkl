@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Detail Siswa - JEJAK</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  textarea { width:100%; min-height:72px; padding:11px 12px; font:inherit; border:1px solid var(--garis); border-radius:6px; background:#fff; }
+  h2 { font-size:1.05rem; margin:22px 0 8px; color:var(--aksen); }
+  details { border-top:1px solid var(--garis); padding:10px 0; }
+  summary { cursor:pointer; font-weight:600; }
+  details p { margin:6px 0 0; }
+  .perlu { color:var(--galat); font-weight:700; }
+  .tanggapan { background:var(--kertas); border-radius:6px; padding:8px 10px; margin-top:8px; }
+  .ok { color:var(--aksen); font-weight:600; }
+  .cek { display:flex; gap:10px; align-items:center; font-weight:400; margin:0 0 12px; }
+  .cek input { width:auto; }
+</style>
+</head>
+<body>
+<header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
+<main>
+  <p><a href="guru.html">&larr; Dashboard</a></p>
+  <h1 id="judul">Detail Siswa</h1>
+  <p id="sub" class="redup"></p>
+
+  <h2>Kehadiran (14 hari terakhir)</h2>
+  <div class="kartu" id="hadir">Memuat...</div>
+
+  <h2>Jurnal dan tanggapan</h2>
+  <label class="cek"><input id="filter" type="checkbox"> Tampilkan hanya yang perlu ditanggapi</label>
+  <div class="kartu" id="jurnal">Memuat...</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const idSiswa = new URLSearchParams(location.search).get("id");
+const TINGKAT = { belum_paham: "Belum paham", cukup: "Cukup", paham: "Paham" };
+const LABEL = { "Asia/Jayapura": "WIT", "Asia/Makassar": "WITA", "Asia/Jakarta": "WIB" };
+let zona = "Asia/Jayapura", daftarJurnal = [], guruId = null;
+
+const tgl = d => new Date(d + "T00:00:00").toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+const tglPendek = d => new Date(d + "T00:00:00").toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" });
+const jam = t => t ? new Date(t).toLocaleTimeString("id-ID", { timeZone: zona, hour: "2-digit", minute: "2-digit" }) : "-";
+
+function baris(induk, label, isi) {
+  if (!isi) return;
+  const p = document.createElement("p");
+  const b = document.createElement("b");
+  b.textContent = label + ": ";
+  p.appendChild(b);
+  p.appendChild(document.createTextNode(isi));
+  induk.appendChild(p);
+}
+
+// Status pertanyaan DIHITUNG dari data (tidak disimpan)
+function status(j) {
+  if (!j.send_to_teacher) return "";
+  if (j.understood) return "Sudah dipahami";
+  return j.feedback.length ? "Sudah ditanggapi" : "Belum dijawab";
+}
+
+function tampilJurnal() {
+  const el = $("jurnal");
+  const data = daftarJurnal.filter(j => !$("filter").checked || status(j) === "Belum dijawab");
+  el.textContent = "";
+  if (!data.length) { el.textContent = $("filter").checked ? "Tidak ada pertanyaan yang menunggu tanggapan." : "Siswa ini belum mengisi jurnal."; return; }
+  data.forEach(j => {
+    const d = document.createElement("details");
+    const s = document.createElement("summary");
+    const st = status(j);
+    s.textContent = tglPendek(j.activity_date) + ": " + j.activity_title + " (" + TINGKAT[j.understanding_level] + ")" + (st ? " - " + st : "");
+    if (st === "Belum dijawab") s.className = "perlu";
+    d.appendChild(s);
+    baris(d, "Tanggal", tgl(j.activity_date));
+    baris(d, "Unit kerja", j.location);
+    baris(d, "Apa yang dikerjakan", j.activity_description);
+    baris(d, "Apa yang dipelajari", j.what_learned);
+    baris(d, "Belum dipahami", j.what_not_understood);
+    baris(d, "Paling menarik", j.interesting_part);
+    baris(d, "Paling sulit", j.difficult_part);
+    baris(d, "Perasaan", j.feeling);
+    baris(d, "Ingin belajar lebih lanjut", j.want_to_learn_more ? "Ya" : "");
+    j.feedback.forEach(f => {
+      const t = document.createElement("div");
+      t.className = "tanggapan";
+      baris(t, "Tanggapan guru", f.response);
+      d.appendChild(t);
+    });
+    const area = document.createElement("textarea");
+    area.setAttribute("aria-label", "Tulis tanggapan untuk jurnal ini");
+    area.placeholder = "Tulis tanggapan untuk siswa...";
+    area.style.marginTop = "10px";
+    const kirim = document.createElement("button");
+    kirim.type = "button"; kirim.textContent = "Kirim tanggapan"; kirim.style.marginTop = "8px";
+    const info = document.createElement("p");
+    info.setAttribute("role", "alert");
+    kirim.addEventListener("click", async () => {
+      const teks = area.value.trim();
+      if (!teks) { info.className = "galat"; info.textContent = "Tanggapan tidak boleh kosong."; return; }
+      kirim.disabled = true; kirim.textContent = "Mengirim...";
+      const { error } = await db.from("feedback").insert({ journal_id: j.id, responder_id: guruId, response: teks });
+      if (error) { info.className = "galat"; info.textContent = "Gagal mengirim: " + error.message; kirim.disabled = false; kirim.textContent = "Kirim tanggapan"; return; }
+      await muatJurnal();
+    });
+    d.appendChild(area); d.appendChild(kirim); d.appendChild(info);
+    el.appendChild(d);
+  });
+}
+
+async function muatJurnal() {
+  const { data, error } = await db.from("journals")
+    .select("id, activity_date, activity_title, location, activity_description, what_learned, what_not_understood, interesting_part, difficult_part, understanding_level, want_to_learn_more, feeling, send_to_teacher, understood, feedback(id, response, created_at)")
+    .eq("student_id", idSiswa).order("activity_date", { ascending: false }).order("created_at", { ascending: false });
+  if (error) { $("jurnal").textContent = "Jurnal belum bisa dimuat: " + error.message; return; }
+  daftarJurnal = data;
+  tampilJurnal();
+}
+
+(async () => {
+  if (!await wajibRole("guru")) return;
+  const { data: { session } } = await db.auth.getSession();
+  guruId = session.user.id;
+  const { data: s, error } = await db.from("students")
+    .select("nis, class_name, zona_waktu, profiles!students_profile_id_fkey(full_name)").eq("id", idSiswa).maybeSingle();
+  if (error || !s) { $("judul").textContent = "Siswa tidak ditemukan"; $("hadir").textContent = "-"; $("jurnal").textContent = "-"; return; }
+  zona = s.zona_waktu;
+  $("judul").textContent = s.profiles.full_name;
+  $("sub").textContent = "NIS " + s.nis + ", kelas " + s.class_name + ". Jam ditampilkan dalam " + (LABEL[zona] || "") + ".";
+
+  const { data: h, error: e2 } = await db.from("attendance")
+    .select("attendance_date, status, check_in, check_out").eq("student_id", idSiswa)
+    .order("attendance_date", { ascending: false }).limit(14);
+  if (e2) { $("hadir").textContent = "Kehadiran belum bisa dimuat: " + e2.message; }
+  else if (!h.length) { $("hadir").textContent = "Belum ada catatan kehadiran."; }
+  else {
+    const ul = document.createElement("ul");
+    h.forEach(r => {
+      const li = document.createElement("li");
+      li.textContent = tglPendek(r.attendance_date) + ": " + r.status + " (masuk " + jam(r.check_in) + ", pulang " + jam(r.check_out) + ")";
+      ul.appendChild(li);
+    });
+    $("hadir").textContent = ""; $("hadir").appendChild(ul);
+  }
+  $("filter").addEventListener("change", tampilJurnal);
+  await muatJurnal();
+})();
+</script>
+</body>
+</html>

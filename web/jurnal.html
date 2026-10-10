@@ -126,7 +126,7 @@ async function unggahFoto(jurnalId, files, sudahAda) {
 
 async function muatRiwayat() {
   const { data, error } = await db.from("journals")
-    .select("id, activity_date, activity_title, location, activity_description, what_learned, what_not_understood, interesting_part, difficult_part, understanding_level, want_to_learn_more, feeling, send_to_teacher, journal_photos(id)")
+    .select("id, activity_date, activity_title, location, activity_description, what_learned, what_not_understood, interesting_part, difficult_part, understanding_level, want_to_learn_more, feeling, send_to_teacher, understood, journal_photos(id), feedback(response, created_at)")
     .order("activity_date", { ascending: false }).order("created_at", { ascending: false }).limit(30);
   const el = $("riwayat");
   if (error) { el.textContent = "Riwayat belum bisa dimuat: " + error.message; return; }
@@ -147,6 +147,20 @@ async function muatRiwayat() {
     baris(d, "Perasaan", j.feeling);
     baris(d, "Ingin belajar lebih lanjut", j.want_to_learn_more ? "Ya" : "");
     baris(d, "Pertanyaan diteruskan ke guru", j.send_to_teacher ? "Ya" : "");
+    j.feedback.forEach(f => baris(d, "Tanggapan guru", f.response));
+    if (j.send_to_teacher) {
+      baris(d, "Status pertanyaan", j.understood ? "Sudah dipahami" : j.feedback.length ? "Sudah ditanggapi" : "Belum dijawab");
+      if (j.feedback.length && !j.understood) {
+        const pahami = document.createElement("button");
+        pahami.type = "button"; pahami.textContent = "Tandai sudah dipahami"; pahami.style.marginTop = "8px";
+        pahami.addEventListener("click", async () => {
+          pahami.disabled = true;
+          await db.from("journals").update({ understood: true }).eq("id", j.id);
+          await muatRiwayat();
+        });
+        d.appendChild(pahami);
+      }
+    }
     baris(d, "Foto", j.journal_photos.length ? j.journal_photos.length + " foto (lihat di Bukti & Arsip PKL)" : "");
     const tambah = document.createElement("input");
     tambah.type = "file"; tambah.accept = "image/*"; tambah.multiple = true;

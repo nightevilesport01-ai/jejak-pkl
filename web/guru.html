@@ -5,34 +5,75 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dashboard Guru - JEJAK</title>
 <link rel="stylesheet" href="style.css">
+<style>
+  a.siswa { display:block; color:inherit; text-decoration:none; }
+  a.siswa:hover, a.siswa:focus-visible { border-color:var(--aksen); }
+  .nama-siswa { font-weight:700; font-size:1.05rem; }
+  .perlu { color:var(--galat); font-weight:700; }
+  .ringkas { margin:0 0 12px; font-weight:600; }
+</style>
 </head>
 <body>
 <header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
 <main>
   <h1>Dashboard Guru</h1>
-  <p class="redup">Siswa yang kamu bimbing.</p>
-  <div class="kartu" id="info">Memuat data...</div>
-  <div class="kartu redup">Jejak kegiatan, feedback, dan kehadiran siswa menyusul di halaman berikutnya.</div>
+  <p class="redup">Pantau siswa bimbinganmu. Ketuk nama siswa untuk melihat jurnal dan memberi tanggapan.</p>
+  <p id="ringkas" class="ringkas"></p>
+  <div id="daftar" class="kartu">Memuat data...</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script>
+const WIT = "Asia/Jayapura"; // "hari ini" mengikuti aturan database
+const jam = (t, z) => t ? new Date(t).toLocaleTimeString("id-ID", { timeZone: z, hour: "2-digit", minute: "2-digit" }) : "-";
+const LABEL = { "Asia/Jayapura": "WIT", "Asia/Makassar": "WITA", "Asia/Jakarta": "WIB" };
+
 (async () => {
   if (!await wajibRole("guru")) return;
-  const el = document.getElementById("info");
-  const { data, error } = await db.from("students")
-    .select("nis, class_name, profiles!students_profile_id_fkey(full_name)");
-  if (error) { el.textContent = "Data belum bisa dimuat: " + error.message; return; }
-  if (!data.length) { el.textContent = "Belum ada siswa bimbingan. Minta admin menambahkannya."; return; }
+  const el = document.getElementById("daftar");
+  const hari = new Date().toLocaleDateString("sv-SE", { timeZone: WIT });
+  const d = new Date(hari + "T00:00:00"); d.setDate(d.getDate() - 6);
+  const mulai = d.toLocaleDateString("sv-SE");
+
+  // Semua data sudah disaring aturan akses (RLS): guru hanya menerima siswa bimbingannya
+  const [siswa, absen, jurnal, tanya] = await Promise.all([
+    db.from("students").select("id, nis, class_name, zona_waktu, profiles!students_profile_id_fkey(full_name)"),
+    db.from("attendance").select("student_id, status, check_in, check_out").eq("attendance_date", hari),
+    db.from("journals").select("student_id").gte("activity_date", mulai),
+    db.from("journals").select("student_id, feedback(id)").eq("send_to_teacher", true)
+  ]);
+  const galat = siswa.error || absen.error || jurnal.error || tanya.error;
+  if (galat) { el.textContent = "Data belum bisa dimuat: " + galat.message; return; }
+  if (!siswa.data.length) { el.textContent = "Belum ada siswa bimbingan. Minta admin menambahkannya."; return; }
+
+  const hariIni = {}; absen.data.forEach(a => { hariIni[a.student_id] = a; });
+  const jumlah = {}; jurnal.data.forEach(j => { jumlah[j.student_id] = (jumlah[j.student_id] || 0) + 1; });
+  const belum = {}; tanya.data.forEach(j => { if (!j.feedback.length) belum[j.student_id] = (belum[j.student_id] || 0) + 1; });
+
+  const hadir = siswa.data.filter(s => hariIni[s.id] && hariIni[s.id].status === "hadir").length;
+  const totalBelum = Object.values(belum).reduce((a, b) => a + b, 0);
+  document.getElementById("ringkas").textContent =
+    siswa.data.length + " siswa bimbingan, " + hadir + " hadir hari ini, " + totalBelum + " pertanyaan belum dijawab.";
+
   el.textContent = "";
-  const ul = document.createElement("ul");
-  data.forEach(s => {
-    const li = document.createElement("li");
-    li.textContent = s.profiles.full_name + " (NIS " + s.nis + ", kelas " + s.class_name + ")";
-    ul.appendChild(li);
+  el.style.padding = "0"; el.style.border = "0"; el.style.background = "transparent";
+  siswa.data.forEach(s => {
+    const a = document.createElement("a");
+    a.className = "kartu siswa";
+    a.href = "guru-siswa.html?id=" + encodeURIComponent(s.id);
+    const baris = (teks, kelas) => { const p = document.createElement("p"); p.style.margin = "2px 0"; if (kelas) p.className = kelas; p.textContent = teks; a.appendChild(p); };
+    baris(s.profiles.full_name, "nama-siswa");
+    baris("NIS " + s.nis + ", kelas " + s.class_name, "redup");
+    const h = hariIni[s.id];
+    const z = LABEL[s.zona_waktu] || "";
+    baris("Hari ini: " + (!h ? "belum check-in"
+      : h.status !== "hadir" ? h.status
+      : "hadir, masuk " + jam(h.check_in, s.zona_waktu) + (h.check_out ? ", pulang " + jam(h.check_out, s.zona_waktu) : ", belum pulang") + " " + z));
+    baris("Jurnal 7 hari terakhir: " + (jumlah[s.id] || 0));
+    baris("Pertanyaan belum dijawab: " + (belum[s.id] || 0), belum[s.id] ? "perlu" : "");
+    el.appendChild(a);
   });
-  el.appendChild(ul);
 })();
 </script>
 </body>
