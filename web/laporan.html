@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Isi Laporan PKL - JEJAK</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  textarea { width:100%; min-height:130px; padding:11px 12px; font:inherit; border:1px solid var(--garis); border-radius:6px; background:#fff; }
+  h2 { font-size:1.05rem; margin:22px 0 8px; color:var(--aksen); }
+  .petunjuk { color:var(--redup); font-size:.9rem; margin:0 0 6px; }
+  .ok { color:var(--aksen); font-weight:600; min-height:1.5em; margin-top:12px; }
+  .progres { font-weight:600; margin:0 0 12px; }
+  .otomatis { background:#EAF1F8; border-color:#C9D9EA; }
+  .otomatis p { margin:4px 0; }
+</style>
+</head>
+<body>
+<header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
+<main>
+  <p><a href="siswa.html">&larr; Dashboard</a></p>
+  <h1>Isi Laporan PKL</h1>
+  <p class="redup">Tulis bagian laporan yang tidak bisa diisi otomatis. Simpan kapan saja dan lanjutkan nanti.</p>
+
+  <div class="kartu otomatis">
+    <b>Terisi otomatis dari data JEJAK</b>
+    <p>Sampul (nama, NIS, kelas, program keahlian, tempat PKL), Lembar Pengesahan, 2.2 Waktu Pelaksanaan, 2.3 Jurnal Pelaksanaan PKL, serta lampiran foto dokumentasi, Daftar Hadir, dan Daftar Kegiatan Harian.</p>
+    <p>Biodata peserta (lampiran) dicetak kosong dan diisi tangan, karena berisi data pribadi.</p>
+  </div>
+
+  <p id="progres" class="progres"></p>
+  <form id="form" class="kartu"></form>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const BAGIAN = [
+  ["kata_pengantar", "Kata Pengantar", "Ucapan syukur, tujuan penyusunan laporan, ucapan terima kasih kepada pihak terkait, tempat dan tanggal penyusunan, dan nama penulis."],
+  ["latar_belakang", "1.1 Latar Belakang", "Alasan perlunya PKL dan manfaatnya bagi peserta."],
+  ["tujuan", "1.2 Tujuan Pelaksanaan PKL", "Tujuan umum dan tujuan khusus pelaksanaan PKL."],
+  ["rumusan_masalah", "1.3 Rumusan Masalah", "Proses atau sistem kerja yang diamati, tugas yang dikerjakan, kendala yang ditemukan, dan solusi atau upaya untuk mengatasinya."],
+  ["profil_dunia_kerja", "2.1 Deskripsi / Profil Dunia Kerja", "Profil tempat PKL."],
+  ["hasil_pelaksanaan", "2.4 Hasil Pelaksanaan PKL", "Hasil yang diperoleh selama pelaksanaan PKL."],
+  ["kesimpulan", "3.1 Kesimpulan", "Ringkasan hasil PKL dan pencapaian selama kegiatan."],
+  ["saran", "3.2 Saran", "Ditujukan kepada instansi tempat PKL, sekolah, dan peserta PKL selanjutnya."]
+];
+const NIP = [
+  ["nip_pembimbing_sekolah", "NIP/NIPPPK Pembimbing Sekolah (jika ada)"],
+  ["nip_pembimbing_industri", "NIP/NIPPPK Pembimbing Dunia Kerja (jika ada)"]
+];
+let siswaId = null;
+
+function hitungProgres() {
+  const terisi = BAGIAN.filter(b => $(b[0]).value.trim()).length;
+  $("progres").textContent = terisi + " dari " + BAGIAN.length + " bagian sudah terisi.";
+}
+
+function susunForm(data) {
+  const f = $("form");
+  BAGIAN.forEach(([kolom, judul, petunjuk]) => {
+    const l = document.createElement("label"); l.htmlFor = kolom; l.textContent = judul; f.appendChild(l);
+    const p = document.createElement("p"); p.className = "petunjuk"; p.textContent = petunjuk; f.appendChild(p);
+    const t = document.createElement("textarea"); t.id = kolom; t.value = data[kolom] || ""; t.addEventListener("input", hitungProgres); f.appendChild(t);
+  });
+  const h = document.createElement("h2"); h.textContent = "Untuk Lembar Pengesahan (opsional)"; f.appendChild(h);
+  NIP.forEach(([kolom, judul]) => {
+    const l = document.createElement("label"); l.htmlFor = kolom; l.textContent = judul; f.appendChild(l);
+    const i = document.createElement("input"); i.id = kolom; i.maxLength = 40; i.value = data[kolom] || ""; f.appendChild(i);
+  });
+  const pesan = document.createElement("div"); pesan.id = "pesan"; pesan.setAttribute("role", "alert"); f.appendChild(pesan);
+  const b = document.createElement("button"); b.type = "submit"; b.id = "simpan"; b.textContent = "Simpan laporan"; f.appendChild(b);
+  hitungProgres();
+}
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const pesan = $("pesan"), tombol = $("simpan");
+  pesan.className = "galat"; pesan.textContent = "";
+  tombol.disabled = true; tombol.textContent = "Menyimpan...";
+  const isi = { student_id: siswaId, updated_at: new Date().toISOString() };
+  BAGIAN.forEach(b => { isi[b[0]] = $(b[0]).value.trim() || null; });
+  NIP.forEach(n => { isi[n[0]] = $(n[0]).value.trim() || null; });
+  const { error } = await db.from("reports").upsert(isi, { onConflict: "student_id" });
+  if (error) {
+    pesan.textContent = "Gagal menyimpan: " + error.message;
+  } else {
+    pesan.className = "ok";
+    pesan.textContent = "Tersimpan pukul " + new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + ".";
+  }
+  tombol.disabled = false; tombol.textContent = "Simpan laporan";
+});
+
+(async () => {
+  if (!await wajibRole("siswa")) return;
+  const { data: s, error } = await db.from("students").select("id").single();
+  if (error) { $("form").textContent = "Data siswa belum bisa dimuat: " + error.message; return; }
+  siswaId = s.id;
+  const { data, error: e2 } = await db.from("reports").select("*").eq("student_id", siswaId).maybeSingle();
+  if (e2) { $("form").textContent = "Laporan belum bisa dimuat: " + e2.message; return; }
+  susunForm(data || {});
+})();
+</script>
+</body>
+</html>
