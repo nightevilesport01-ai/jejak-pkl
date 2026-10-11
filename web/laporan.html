@@ -13,6 +13,10 @@
   .progres { font-weight:600; margin:0 0 12px; }
   .otomatis { background:#EAF1F8; border-color:#C9D9EA; }
   .otomatis p { margin:4px 0; }
+  .galeri { display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:10px; margin-top:12px; }
+  .galeri figure { margin:0; font-size:.8rem; color:var(--redup); }
+  .galeri img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:6px; border:1px solid var(--garis); }
+  .galeri button, #btn-tabel { padding:6px 10px; font-size:.85rem; margin-top:4px; }
 </style>
 </head>
 <body>
@@ -26,6 +30,14 @@
     <b>Terisi otomatis dari data JEJAK</b>
     <p>Sampul (nama, NIS, kelas, program keahlian, tempat PKL), Lembar Pengesahan, 2.2 Waktu Pelaksanaan, 2.3 Jurnal Pelaksanaan PKL, serta lampiran foto dokumentasi, Daftar Hadir, dan Daftar Kegiatan Harian.</p>
     <p>Biodata peserta (lampiran) dicetak kosong dan diisi tangan, karena berisi data pribadi.</p>
+  </div>
+
+  <div class="kartu">
+    <b>Sisipkan foto atau tabel</b>
+    <p class="petunjuk">Ketuk kotak teks tempat foto atau tabel ingin muncul, lalu tekan tombol di bawah. Tabel: tiap baris diawali tanda | dan kolom dipisah tanda |. Foto tampil sebagai kode [foto:xxxxxx] dan menjadi gambar saat dicetak.</p>
+    <button type="button" id="btn-tabel">Sisipkan contoh tabel</button>
+    <p id="info-sisip" class="galat" role="alert"></p>
+    <div id="galeri-foto" class="galeri">Memuat foto...</div>
   </div>
 
   <p id="progres" class="progres"></p>
@@ -50,7 +62,7 @@ const NIP = [
   ["nip_pembimbing_sekolah", "NIP/NIPPPK Pembimbing Sekolah (jika ada)"],
   ["nip_pembimbing_industri", "NIP/NIPPPK Pembimbing Dunia Kerja (jika ada)"]
 ];
-let siswaId = null;
+let siswaId = null, terakhir = null;
 
 function hitungProgres() {
   const terisi = BAGIAN.filter(b => $(b[0]).value.trim()).length;
@@ -62,7 +74,7 @@ function susunForm(data) {
   BAGIAN.forEach(([kolom, judul, petunjuk]) => {
     const l = document.createElement("label"); l.htmlFor = kolom; l.textContent = judul; f.appendChild(l);
     const p = document.createElement("p"); p.className = "petunjuk"; p.textContent = petunjuk; f.appendChild(p);
-    const t = document.createElement("textarea"); t.id = kolom; t.value = data[kolom] || ""; t.addEventListener("input", hitungProgres); f.appendChild(t);
+    const t = document.createElement("textarea"); t.id = kolom; t.value = data[kolom] || ""; t.addEventListener("input", hitungProgres); t.addEventListener("focus", () => { terakhir = t; }); f.appendChild(t);
   });
   const h = document.createElement("h2"); h.textContent = "Untuk Lembar Pengesahan (opsional)"; f.appendChild(h);
   NIP.forEach(([kolom, judul]) => {
@@ -72,6 +84,39 @@ function susunForm(data) {
   const pesan = document.createElement("div"); pesan.id = "pesan"; pesan.setAttribute("role", "alert"); f.appendChild(pesan);
   const b = document.createElement("button"); b.type = "submit"; b.id = "simpan"; b.textContent = "Simpan laporan"; f.appendChild(b);
   hitungProgres();
+}
+
+// Sisipkan teks (kode foto atau contoh tabel) di posisi kursor pada kotak teks yang terakhir diketuk
+function sisipkan(teks) {
+  const info = $("info-sisip");
+  info.textContent = "";
+  if (!terakhir) { info.textContent = "Ketuk dulu kotak teks tujuan, lalu tekan tombolnya lagi."; return; }
+  const a = terakhir.selectionStart == null ? terakhir.value.length : terakhir.selectionStart;
+  const awal = terakhir.value.slice(0, a), akhir = terakhir.value.slice(a);
+  terakhir.value = awal + (awal && !awal.endsWith("\n") ? "\n" : "") + teks + "\n" + akhir;
+  hitungProgres();
+}
+$("btn-tabel").addEventListener("click", () => sisipkan("| Kolom 1 | Kolom 2 | Kolom 3 |\n| isi | isi | isi |\n| isi | isi | isi |"));
+
+async function muatGaleri() {
+  const el = $("galeri-foto");
+  const { data, error } = await db.from("journal_photos").select("id, file_url, journals(activity_date, activity_title)").limit(200);
+  if (error) { el.textContent = "Foto belum bisa dimuat: " + error.message; return; }
+  if (!data.length) { el.textContent = "Belum ada foto kegiatan. Tambahkan foto lewat jurnal dulu."; return; }
+  const { data: tautan } = await db.storage.from("bukti-jurnal").createSignedUrls(data.map(f => f.file_url), 3600);
+  const url = {}; (tautan || []).forEach(t => { url[t.path] = t.signedUrl; });
+  data.sort((x, y) => x.journals.activity_date.localeCompare(y.journals.activity_date));
+  el.textContent = "";
+  data.forEach(f => {
+    if (!url[f.file_url]) return;
+    const fig = document.createElement("figure");
+    const img = document.createElement("img"); img.src = url[f.file_url]; img.alt = "Foto kegiatan: " + f.journals.activity_title; fig.appendChild(img);
+    const cap = document.createElement("div"); cap.textContent = f.journals.activity_title; fig.appendChild(cap);
+    const b = document.createElement("button"); b.type = "button"; b.textContent = "Sisipkan";
+    b.setAttribute("aria-label", "Sisipkan foto " + f.journals.activity_title);
+    b.addEventListener("click", () => sisipkan("[foto:" + f.id.slice(0, 6) + "]"));
+    fig.appendChild(b); el.appendChild(fig);
+  });
 }
 
 $("form").addEventListener("submit", async (e) => {
@@ -100,6 +145,7 @@ $("form").addEventListener("submit", async (e) => {
   const { data, error: e2 } = await db.from("reports").select("*").eq("student_id", siswaId).maybeSingle();
   if (e2) { $("form").textContent = "Laporan belum bisa dimuat: " + e2.message; return; }
   susunForm(data || {});
+  await muatGaleri();
 })();
 </script>
 </body>

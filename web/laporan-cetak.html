@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cetak Laporan PKL - JEJAK</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  main { max-width:900px; }
+  #laporan { font-family:Arial, Helvetica, sans-serif; font-size:12pt; line-height:1.5; color:#000; }
+  .halaman { background:#fff; border:1px solid var(--garis); padding:18px; margin:14px 0; overflow-x:auto; }
+  .tengah { text-align:center; }
+  h2.bab { text-align:center; font-size:14pt; font-weight:700; margin:0; }
+  h3.sub { font-size:12pt; font-weight:700; margin:18px 0 6px; }
+  p.isi { text-align:justify; white-space:pre-wrap; margin:0 0 8px; }
+  .kosong { color:#888; font-style:italic; }
+  .sampul { border:10px solid; min-height:21cm; display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding:28px 20px; text-align:center; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .sampul h1 { font-size:14pt; margin:4px 0; }
+  .sampul h2 { font-size:14pt; margin:2px 0; }
+  .logo { height:110px; } .logo-kosong { width:110px; height:110px; border:2px dashed #555; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:10pt; }
+  table { border-collapse:collapse; width:100%; }
+  table.data th, table.data td, table.ttd th, table.ttd td { border:1px solid #000; padding:4px 6px; font-size:11pt; line-height:1.3; vertical-align:top; }
+  table.data th { text-align:center; } table.data td { white-space:pre-line; }
+  table.ttd td.ruang { height:80px; } table.ttd td.nama { text-align:center; }
+  table.info td, table.bio td { padding:2px 4px; vertical-align:top; border:0; }
+  table.info td:first-child { width:40%; } table.bio td:first-child { width:42%; }
+  .pengesahan { display:flex; justify-content:space-between; gap:20px; margin-top:30px; }
+  .pengesahan div { width:48%; } .ruang-ttd { height:90px; }
+  .isi-daftar { display:flex; gap:6px; margin:2px 0; } .isi-daftar .titik { flex:1; border-bottom:1px dotted #000; margin-bottom:5px; } .isi-daftar span.no { width:2.5em; }
+  .foto-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; } .foto-grid figure { margin:0; page-break-inside:avoid; }
+  .foto-grid img { width:100%; max-height:7.5cm; object-fit:contain; border:1px solid #999; } .foto-grid figcaption { font-size:10pt; text-align:center; }
+  .peringatan { background:#FFF2CC; border-left:5px solid #BF9000; padding:8px 12px; margin:10px 0; }
+  .sampul-halaman { page:sampul; }
+  @page { size:A4; margin:3cm 3cm 3cm 4cm; @bottom-center { content:counter(page); font:11pt Arial, sans-serif; } }
+  @page sampul { @bottom-center { content:none; } }
+  @media print {
+    header, .tidak-cetak { display:none !important; }
+    body { background:#fff; } main { max-width:none; padding:0; }
+    .halaman { border:0; padding:0; margin:0; overflow:visible; page-break-before:always; }
+    #laporan .halaman:first-child { page-break-before:auto; }
+    table.data tr, table.ttd { page-break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+<header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
+<main>
+  <div class="tidak-cetak">
+    <p><a href="siswa.html">&larr; Dashboard</a> &nbsp; <a href="laporan.html">Isi laporan</a></p>
+    <h1>Cetak Laporan PKL</h1>
+    <p class="redup">Laporan disusun otomatis sesuai format sekolah. Periksa dulu, lalu cetak.</p>
+    <div id="peringatan"></div>
+    <button type="button" id="btn-cetak">Cetak / Simpan PDF</button> <button type="button" id="btn-word" style="background:#fff;color:#1F6F5C;border:1px solid #1F6F5C">Unduh Word (.docx)</button>
+    <p id="info-word" class="redup" role="alert" style="margin:8px 0 0"></p>
+    <p class="redup" style="font-size:.9rem">Di jendela cetak: pilih <b>Simpan sebagai PDF</b>, ukuran <b>A4</b>, margin <b>Default</b>, dan matikan <b>Headers and footers</b>. Kalau warna sampul tidak muncul, aktifkan <b>Background graphics</b>. Daftar Isi tidak memuat nomor halaman, jadi isi manual setelah dicetak. File Word bisa diedit di Word atau Google Docs; periksa dan rapikan tampilannya setelah diunduh.</p>
+  </div>
+  <div id="laporan">Memuat data...</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@9.6.1/dist/index.iife.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const JADWAL = { senin_jumat: [1, 2, 3, 4, 5], senin_sabtu: [1, 2, 3, 4, 5, 6], setiap_hari: [0, 1, 2, 3, 4, 5, 6] };
+const JADWAL_TEKS = { senin_jumat: "Senin sampai Jumat", senin_sabtu: "Senin sampai Sabtu", setiap_hari: "setiap hari" };
+const LABEL = { "Asia/Jayapura": "WIT", "Asia/Makassar": "WITA", "Asia/Jakarta": "WIB" };
+const WARNA = { Pemasaran: ["#F4B6B0", "#B3261E"], AKL: ["#BFE3B8", "#2E7D32"], MPLB: ["#FFF0A8", "#B58900"], TP: ["#D9BFEF", "#6A3FA0"], TJKT: ["#BFE3F5", "#1F78A8"], PPLG: ["#BFE3F5", "#1F78A8"], DKV: ["#BFE3F5", "#1F78A8"] };
+const BAGIAN = { kata_pengantar: "Kata Pengantar", latar_belakang: "1.1 Latar Belakang", tujuan: "1.2 Tujuan", rumusan_masalah: "1.3 Rumusan Masalah", profil_dunia_kerja: "2.1 Profil Dunia Kerja", hasil_pelaksanaan: "2.4 Hasil Pelaksanaan", kesimpulan: "3.1 Kesimpulan", saran: "3.2 Saran" };
+let s, nama, guru, lap = {}, absen = {}, jurnal = [], foto = [];
+
+const hariIni = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jayapura" });
+const tglPanjang = iso => new Date(iso + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+const hariTgl = iso => HARI[new Date(iso + "T00:00:00").getDay()] + ", " + iso.split("-").reverse().join("-");
+const jam = t => t ? new Date(t).toLocaleTimeString("id-ID", { timeZone: s.zona_waktu, hour: "2-digit", minute: "2-digit" }).replace(".", ":") + " " + LABEL[s.zona_waktu] : "";
+function el(tag, teks, kelas) { const e = document.createElement(tag); if (teks != null) e.textContent = teks; if (kelas) e.className = kelas; return e; }
+function rentang(a, b) { const o = [], d = new Date(a + "T00:00:00"), e = new Date(b + "T00:00:00"); while (d <= e) { o.push(d.toLocaleDateString("sv-SE")); d.setDate(d.getDate() + 1); } return o; }
+function halaman() { return el("section", null, "halaman"); }
+function judulBab(h, a, b) { h.appendChild(el("h2", a, "bab")); if (b) h.appendChild(el("h2", b, "bab")); }
+function bagian(h, judul, kolom) { h.appendChild(el("h3", judul, "sub")); if (lap[kolom]) teks(h, lap[kolom]); else h.appendChild(el("p", "[Bagian ini belum diisi]", "isi kosong")); }
+function tabel(kolom, baris, kelas) { const t = el("table", null, kelas || "data"); const r = el("tr"); kolom.forEach(k => r.appendChild(el("th", k))); t.appendChild(r); baris.forEach(b => { const tr = el("tr"); b.forEach(c => tr.appendChild(el("td", c))); t.appendChild(tr); }); return t; }
+function infoTabel(pasang, kelas) { const t = el("table", null, kelas || "info"); pasang.forEach(([a, b]) => { const tr = el("tr"); tr.appendChild(el("td", a)); tr.appendChild(el("td", ": " + (b || ""))); t.appendChild(tr); }); return t; }
+function kepalaDaftar(h, judul) {
+  h.appendChild(el("h2", judul, "bab")); h.appendChild(el("p", "", "isi"));
+  h.appendChild(infoTabel([["Nama Peserta Didik", nama], ["Kelas", s.class_name], ["Tempat PKL", s.company_name], ["Nama Pembimbing Dunia Kerja", s.industry_supervisor], ["Nama Pembimbing Sekolah", guru]]));
+}
+function tandaTangan(h) {
+  h.appendChild(el("p", "Sorong, ......................................", "isi")).style.textAlign = "right";
+  const t = el("table", null, "ttd"), r1 = el("tr"), r2 = el("tr"), r3 = el("tr");
+  [["Dibuat,\nPeserta Didik", nama], ["Diperiksa,\nPembimbing Dunia Kerja", s.industry_supervisor], ["Divalidasi,\nPembimbing Sekolah", guru]].forEach(([a, b]) => {
+    const th = el("th", a); th.style.whiteSpace = "pre-line"; r1.appendChild(th); r2.appendChild(el("td", "", "ruang")); r3.appendChild(el("td", b || "..............", "nama"));
+  });
+  [r1, r2, r3].forEach(r => t.appendChild(r)); h.appendChild(t);
+}
+
+// Teks laporan: paragraf biasa, tabel (baris diawali "|"), dan foto (baris [foto:kode])
+let nomorGambar = 0;
+function buatTabel(baris) {
+  const sel = b => b.replace(/^\||\|$/g, "").split("|").map(x => x.trim());
+  const data = baris.map(sel).filter(r => !r.every(x => /^:?-+:?$/.test(x)));
+  const t = el("table", null, "data");
+  data.forEach((r, i) => { const tr = el("tr"); r.forEach(x => tr.appendChild(el(i === 0 ? "th" : "td", x))); t.appendChild(tr); });
+  t.style.marginBottom = "10px";
+  return t;
+}
+function figurFoto(kode) {
+  const f = foto.find(x => x.kode === kode);
+  if (!f) return el("p", "[foto " + kode + " tidak ditemukan]", "isi kosong");
+  nomorGambar++;
+  const fig = el("figure"); fig.style.cssText = "margin:8px 0; text-align:center; page-break-inside:avoid";
+  const i = document.createElement("img"); i.src = f.url; i.alt = "Foto kegiatan: " + f.judul; i.style.cssText = "max-width:100%; max-height:8cm; border:1px solid #999";
+  fig.appendChild(i); fig.appendChild(el("figcaption", "Gambar " + nomorGambar + ". " + f.judul + " (" + hariTgl(f.tanggal) + ")"));
+  fig.lastChild.style.fontSize = "10pt";
+  return fig;
+}
+function teks(induk, isi) {
+  let blok = [], tab = [];
+  const lepasTeks = () => { if (blok.length) { induk.appendChild(el("p", blok.join("\n"), "isi")); blok = []; } };
+  const lepasTabel = () => { if (tab.length) { induk.appendChild(buatTabel(tab)); tab = []; } };
+  isi.split("\n").forEach(b => {
+    const t = b.trim(), m = t.match(/^\[foto:([0-9a-f]{6})\]$/i);
+    if (t.startsWith("|")) { lepasTeks(); tab.push(t); }
+    else if (m) { lepasTeks(); lepasTabel(); induk.appendChild(figurFoto(m[1].toLowerCase())); }
+    else { lepasTabel(); blok.push(b); }
+  });
+  lepasTeks(); lepasTabel();
+}
+
+function sampul() {
+  const [bg, garis] = WARNA[s.program_kode] || ["#E5E7EB", "#555555"];
+  const h = halaman(); h.classList.add("sampul-halaman");
+  const k = el("div", null, "sampul"); k.style.background = bg; k.style.borderColor = garis;
+  const atas = el("div"); atas.appendChild(el("h1", "LAPORAN HASIL PRAKTIK KERJA LAPANGAN")); atas.appendChild(el("h1", "PADA " + (s.company_name || "").toUpperCase()));
+  const logo = el("div");
+  const img = document.createElement("img"); img.src = "logo.png"; img.alt = "Logo SMK Negeri 1 Sorong"; img.className = "logo";
+  img.onerror = () => { logo.textContent = ""; logo.appendChild(el("div", "LOGO SEKOLAH", "logo-kosong")); };
+  logo.appendChild(img);
+  const tengah = el("div"); tengah.appendChild(el("p", "Disusun Oleh :", "tengah"));
+  tengah.appendChild(infoTabel([["Nama", nama], ["NIS / NISN", s.nis], ["KELAS", s.class_name], ["PROGRAM KEAHLIAN", s.major]]));
+  const bawah = el("div"); bawah.appendChild(el("h2", "SMK NEGERI 1 SORONG")); bawah.appendChild(el("h2", "TAHUN 2026"));
+  [atas, logo, tengah, bawah].forEach(x => k.appendChild(x)); h.appendChild(k); return h;
+}
+function pengesahan() {
+  const h = halaman(); judulBab(h, "LEMBAR PENGESAHAN");
+  h.appendChild(el("p", "Laporan Hasil Praktik Kerja Lapangan\nPada " + (s.company_name || "...............") + "\ntelah disahkan oleh:", "isi tengah"));
+  const w = el("div", null, "pengesahan");
+  [["Pembimbing Sekolah,", guru, lap.nip_pembimbing_sekolah], ["Pembimbing Dunia Kerja,", s.industry_supervisor, lap.nip_pembimbing_industri]].forEach(([a, n, nip]) => {
+    const d = el("div", null, "tengah"); d.appendChild(el("p", a, "isi")); d.appendChild(el("div", null, "ruang-ttd"));
+    d.appendChild(el("p", "(Ttd dan stempel)", "isi")); d.appendChild(el("p", n || "..............................", "isi")); d.appendChild(el("p", "NIP/NIPPPK: " + (nip || "-"), "isi")); w.appendChild(d);
+  });
+  h.appendChild(w); return h;
+}
+function kataPengantar() { const h = halaman(); judulBab(h, "KATA PENGANTAR"); if (lap.kata_pengantar) teks(h, lap.kata_pengantar); else h.appendChild(el("p", "[Bagian ini belum diisi]", "isi kosong")); return h; }
+function daftarIsi() {
+  const h = halaman(); judulBab(h, "DAFTAR ISI"); h.appendChild(el("p", "", "isi"));
+  ["LEMBAR PENGESAHAN", "KATA PENGANTAR", "DAFTAR ISI", "BAB I PENDAHULUAN", "   1.1 Latar Belakang", "   1.2 Tujuan Pelaksanaan PKL", "   1.3 Rumusan Masalah", "BAB II PELAKSANAAN PKL", "   2.1 Deskripsi/Profil Dunia Kerja", "   2.2 Waktu Pelaksanaan", "   2.3 Jurnal Pelaksanaan PKL", "   2.4 Hasil Pelaksanaan PKL", "BAB III PENUTUP", "   3.1 Kesimpulan", "   3.2 Saran", "LAMPIRAN", "   Biodata Peserta PKL", "   Dokumentasi/Foto Kegiatan Selama PKL", "   Jurnal Harian PKL"].forEach(t => {
+    const r = el("div", null, "isi-daftar"); const a = el("span", t); a.style.whiteSpace = "pre"; r.appendChild(a); r.appendChild(el("span", null, "titik")); r.appendChild(el("span", "", "no")); h.appendChild(r);
+  });
+  return h;
+}
+function bab1() { const h = halaman(); judulBab(h, "BAB I", "PENDAHULUAN"); bagian(h, "1.1  LATAR BELAKANG", "latar_belakang"); bagian(h, "1.2  TUJUAN PELAKSANAAN PKL", "tujuan"); bagian(h, "1.3  RUMUSAN MASALAH", "rumusan_masalah"); return h; }
+function bab2() {
+  const h = halaman(); judulBab(h, "BAB II", "PELAKSANAAN PKL");
+  bagian(h, "2.1.  DESKRIPSI/PROFIL DUNIA KERJA", "profil_dunia_kerja");
+  const hit = k => Object.values(absen).filter(a => a.status === k).length;
+  const periode = s.pkl_start_date && s.pkl_end_date ? tglPanjang(s.pkl_start_date) + " sampai " + tglPanjang(s.pkl_end_date) : "[tanggal PKL belum diisi admin]";
+  h.appendChild(el("h3", "2.2.  WAKTU PELAKSANAAN", "sub"));
+  h.appendChild(el("p", "PKL dilaksanakan di " + (s.company_name || "...") + " pada tanggal " + periode + ", dengan hari kerja " + (JADWAL_TEKS[s.jadwal_kerja] || "") + ". Berdasarkan catatan kehadiran, peserta tercatat hadir " + hit("hadir") + " hari, izin " + hit("izin") + " hari, sakit " + hit("sakit") + " hari, dan alpa " + hit("alpa") + " hari.", "isi"));
+  h.appendChild(el("h3", "2.3.  JURNAL PELAKSANAAN PKL", "sub"));
+  h.appendChild(el("p", "Kegiatan harian selama PKL dirangkum pada tabel aktivitas berikut. Dokumentasi foto kegiatan terdapat pada lampiran.", "isi"));
+  h.appendChild(jurnal.length ? tabel(["No.", "Hari/Tanggal", "Unit Kerja", "Kegiatan", "Yang Dipelajari"], jurnal.map((j, i) => [String(i + 1), hariTgl(j.activity_date), j.location || "-", j.activity_title + ": " + j.activity_description, j.what_learned])) : el("p", "[Belum ada jurnal]", "isi kosong"));
+  bagian(h, "2.4.  HASIL PELAKSANAAN PKL", "hasil_pelaksanaan"); return h;
+}
+function bab3() { const h = halaman(); judulBab(h, "BAB III", "PENUTUP"); bagian(h, "3.1  KESIMPULAN", "kesimpulan"); bagian(h, "3.2  SARAN", "saran"); return h; }
+function biodata() {
+  const h = halaman(); judulBab(h, "LAMPIRAN 1", "BIODATA PESERTA PKL"); h.appendChild(el("p", "", "isi"));
+  const titik = "..........................................................";
+  const t = el("table", null, "bio");
+  [["Nama", nama], ["Jenis Kelamin", ""], ["Tempat/Tanggal Lahir", ""], ["NIS/NISN", s.nis], ["Agama", ""], ["Kelas/Kompetensi Keahlian", (s.class_name || "") + " / " + (s.major || "")], ["Tempat PKL", s.company_name], ["Asal Sekolah", "SMK Negeri 1 Sorong"], ["Alamat Sekolah", ""], ["Alamat Rumah", ""], ["Nomor Telepon/HP", ""], ["Nama Orang Tua/Wali", ""], ["   - Ayah", ""], ["   - Ibu", ""], ["Nomor Telepon/HP Orang Tua/Wali", ""]].forEach(([a, b]) => {
+    const tr = el("tr"); const k = el("td", a); k.style.whiteSpace = "pre"; tr.appendChild(k); tr.appendChild(el("td", ": " + (b || titik))); t.appendChild(tr);
+  });
+  h.appendChild(t); return h;
+}
+function dokumentasi() {
+  const h = halaman(); judulBab(h, "LAMPIRAN 2", "DOKUMENTASI / FOTO KEGIATAN SELAMA PKL"); h.appendChild(el("p", "", "isi"));
+  if (!foto.length) { h.appendChild(el("p", "[Belum ada foto kegiatan]", "isi kosong")); return h; }
+  const g = el("div", null, "foto-grid");
+  foto.forEach(f => { const fig = el("figure"); const i = document.createElement("img"); i.src = f.url; i.alt = "Foto kegiatan: " + f.judul; fig.appendChild(i); fig.appendChild(el("figcaption", hariTgl(f.tanggal) + ": " + f.judul)); g.appendChild(fig); });
+  h.appendChild(g); return h;
+}
+function jurnalHarian() {
+  const h = halaman(); judulBab(h, "LAMPIRAN 3", "JURNAL HARIAN PKL");
+  const a = halaman(); kepalaDaftar(a, "DAFTAR KEGIATAN HARIAN PESERTA PRAKTIK KERJA LAPANGAN (PKL)");
+  a.appendChild(tabel(["No.", "Hari/Tanggal", "Unit Kerja / Pekerjaan", "Catatan*"], jurnal.map((j, i) => [String(i + 1), hariTgl(j.activity_date), (j.location ? j.location + "\n" : "") + j.activity_description, ""])));
+  a.appendChild(el("p", "*) Catatan diberikan oleh pembimbing dunia kerja pada setiap kegiatan atau waktu tertentu.", "isi")); tandaTangan(a);
+  const b = halaman(); kepalaDaftar(b, "DAFTAR HADIR PESERTA PRAKTIK KERJA LAPANGAN (PKL)");
+  const akhir = s.pkl_end_date && s.pkl_end_date < hariIni ? s.pkl_end_date : hariIni;
+  const hk = JADWAL[s.jadwal_kerja] || JADWAL.senin_jumat;
+  const tgl = new Set(s.pkl_start_date ? rentang(s.pkl_start_date, akhir).filter(d => hk.includes(new Date(d + "T00:00:00").getDay())) : []);
+  Object.keys(absen).forEach(d => tgl.add(d));
+  b.appendChild(tabel(["NO.", "HARI, TANGGAL", "JAM MASUK", "PARAF", "JAM PULANG", "PARAF", "KETERANGAN"], Array.from(tgl).sort().map((d, i) => {
+    const x = absen[d]; const ket = x && x.status !== "hadir" ? x.status.charAt(0).toUpperCase() + x.status.slice(1) + (x.reason ? ": " + x.reason : "") : "";
+    return [String(i + 1), hariTgl(d), x ? jam(x.check_in) : "", "", x ? jam(x.check_out) : "", "", ket];
+  })));
+  tandaTangan(b);
+  return [h, a, b];
+}
+
+(async () => {
+  const profil = await wajibRole("siswa");
+  if (!profil) return;
+  nama = profil.full_name;
+  const [st, lp, ab, jr, ft] = await Promise.all([
+    db.from("students").select("id, nis, class_name, major, program_kode, company_name, industry_supervisor, pkl_start_date, pkl_end_date, zona_waktu, jadwal_kerja, profiles!students_guru_id_fkey(full_name)").single(),
+    db.from("reports").select("*").maybeSingle(),
+    db.from("attendance").select("attendance_date, status, reason, check_in, check_out").order("attendance_date").limit(500),
+    db.from("journals").select("activity_date, location, activity_title, activity_description, what_learned").order("activity_date").order("created_at").limit(500),
+    db.from("journal_photos").select("id, file_url, journals(activity_date, activity_title)").limit(200)
+  ]);
+  const galat = st.error || lp.error || ab.error || jr.error || ft.error;
+  if (galat) { $("laporan").textContent = "Data belum bisa dimuat: " + galat.message; return; }
+  s = st.data; guru = s.profiles ? s.profiles.full_name : ""; lap = lp.data || {};
+  ab.data.forEach(a => { absen[a.attendance_date] = a; }); jurnal = jr.data;
+  if (ft.data.length) {
+    const { data: tautan } = await db.storage.from("bukti-jurnal").createSignedUrls(ft.data.map(f => f.file_url), 3600);
+    const url = {}; (tautan || []).forEach(t => { url[t.path] = t.signedUrl; });
+    foto = ft.data.filter(f => url[f.file_url]).map(f => ({ kode: f.id.slice(0, 6).toLowerCase(), url: url[f.file_url], tanggal: f.journals.activity_date, judul: f.journals.activity_title })).sort((a, b) => a.tanggal.localeCompare(b.tanggal));
+  }
+  const kosong = Object.keys(BAGIAN).filter(k => !lap[k]).map(k => BAGIAN[k]);
+  if (kosong.length || !s.program_kode) {
+    const p = el("div", null, "peringatan");
+    if (kosong.length) { p.appendChild(el("p", "Bagian yang belum diisi: " + kosong.join(", ") + ". ")); const a = el("a", "Isi sekarang"); a.href = "laporan.html"; p.appendChild(a); }
+    if (!s.program_kode) p.appendChild(el("p", "Kode program keahlian belum diisi admin, jadi sampul berwarna abu-abu."));
+    $("peringatan").appendChild(p);
+  }
+  $("laporan").textContent = "";
+  [sampul(), pengesahan(), kataPengantar(), daftarIsi(), bab1(), bab2(), bab3(), biodata(), dokumentasi(), ...jurnalHarian()].forEach(x => $("laporan").appendChild(x));
+})();
+
+// ===== Unduh Word (.docx): mengubah isi halaman laporan menjadi dokumen Word yang bisa diedit =====
+const SISI = 7938; // lebar area teks (twips): A4 21 cm dikurangi margin kiri 4 cm dan kanan 3 cm
+function paraD(teks, o) {
+  o = o || {};
+  const D = window.docx;
+  return new D.Paragraph({
+    alignment: o.align, keepNext: o.keepNext, pageBreakBefore: o.pageBreakBefore,
+    spacing: { line: o.line || 360, before: o.before || 0, after: o.after == null ? 120 : o.after },
+    indent: o.indent,
+    children: String(teks).split("\n").map((b, i) => new D.TextRun({ text: b, break: i ? 1 : 0, bold: o.bold, italics: o.italics, color: o.color, size: o.size || 24, font: "Arial" }))
+  });
+}
+function selD(c, kolom, bergaris) {
+  const D = window.docx, th = c.tagName === "TH", pusat = th || c.classList.contains("nama");
+  const g = { style: bergaris ? D.BorderStyle.SINGLE : D.BorderStyle.NONE, size: 4, color: "000000" };
+  return new D.TableCell({
+    width: { size: kolom, type: D.WidthType.DXA }, borders: { top: g, bottom: g, left: g, right: g },
+    margins: { top: 60, bottom: 60, left: 100, right: 100 },
+    children: c.textContent.split("\n").map(b => new D.Paragraph({ alignment: pusat ? D.AlignmentType.CENTER : D.AlignmentType.LEFT, spacing: { line: 276, after: 0 }, children: [new D.TextRun({ text: b, bold: th, size: 22, font: "Arial" })] }))
+  });
+}
+function tabelD(tbl) {
+  const D = window.docx, bergaris = tbl.classList.contains("data") || tbl.classList.contains("ttd");
+  const baris = Array.from(tbl.rows);
+  const w = Array.from(baris[0].cells).map(c => c.getBoundingClientRect().width), jml = w.reduce((a, b) => a + b, 0) || 1;
+  const judul = Array.from(baris[0].cells).map(c => c.textContent.trim().toLowerCase());
+  const mentah = w.map((x, i) => /^no\.?$/.test(judul[i]) ? 600 : Math.max(1150, x / jml * SISI));
+  const total = mentah.reduce((a, b) => a + b, 0), kolom = mentah.map(x => Math.round(x / total * SISI));
+  return new D.Table({
+    width: { size: SISI, type: D.WidthType.DXA }, columnWidths: kolom,
+    rows: baris.map((r, i) => new D.TableRow({
+      cantSplit: true, tableHeader: tbl.classList.contains("data") && i === 0,
+      height: r.cells[0].classList.contains("ruang") ? { value: 1500, rule: D.HeightRule.ATLEAST } : undefined,
+      children: Array.from(r.cells).map((c, j) => selD(c, kolom[j], bergaris))
+    }))
+  });
+}
+async function gambarD(img, maksL, maksT) {
+  const D = window.docx;
+  const r = await fetch(img.src); if (!r.ok) throw new Error("gambar tidak bisa diambil");
+  const buf = await r.arrayBuffer(), jenis = (r.headers.get("content-type") || "").includes("png") ? "png" : "jpg";
+  let w = img.naturalWidth || 400, h = img.naturalHeight || 300;
+  const k = Math.min(1, maksL / w, maksT / h); w = Math.round(w * k); h = Math.round(h * k);
+  return new D.ImageRun({ type: jenis, data: buf, transformation: { width: w, height: h } });
+}
+async function figurD(fig) {
+  const D = window.docx, out = [], img = fig.querySelector("img"), cap = fig.querySelector("figcaption");
+  try { out.push(new D.Paragraph({ alignment: D.AlignmentType.CENTER, keepNext: true, spacing: { before: 120, after: 60 }, children: [await gambarD(img, 520, 300)] })); }
+  catch (e) { out.push(paraD("[foto tidak bisa diunduh ke Word]", { italics: true, color: "888888" })); }
+  if (cap) out.push(paraD(cap.textContent, { align: D.AlignmentType.CENTER, size: 20, after: 160 }));
+  return out;
+}
+function pengesahanD(div) {
+  const D = window.docx, g = { style: D.BorderStyle.NONE, size: 0, color: "FFFFFF" }, b = { top: g, bottom: g, left: g, right: g };
+  const sel = Array.from(div.children).map(kol => new D.TableCell({
+    width: { size: Math.round(SISI / 2), type: D.WidthType.DXA }, borders: b,
+    children: Array.from(kol.children).map(x => x.classList.contains("ruang-ttd") ? paraD("", { before: 1300, after: 0 }) : paraD(x.textContent, { align: D.AlignmentType.CENTER }))
+  }));
+  return new D.Table({ width: { size: SISI, type: D.WidthType.DXA }, columnWidths: [Math.round(SISI / 2), Math.round(SISI / 2)], rows: [new D.TableRow({ children: sel })] });
+}
+function barisDaftarD(div) {
+  const D = window.docx, t = div.children[0].textContent, lead = t.length - t.trimStart().length;
+  return new D.Paragraph({
+    spacing: { line: 360, after: 0 }, indent: { left: lead * 120 },
+    tabStops: [{ type: D.TabStopType.RIGHT, position: SISI, leader: D.LeaderType.DOT }],
+    children: [new D.TextRun({ text: t.trim(), font: "Arial", size: 24 }), new D.TextRun({ children: [new D.Tab()], font: "Arial", size: 24 })]
+  });
+}
+async function sampulD() {
+  const D = window.docx, [bg, garis] = WARNA[s.program_kode] || ["#E5E7EB", "#555555"], C = D.AlignmentType.CENTER;
+  const isi = [paraD("LAPORAN HASIL PRAKTIK KERJA LAPANGAN", { align: C, bold: true, size: 28, before: 200, after: 0 }),
+               paraD("PADA " + (s.company_name || "").toUpperCase(), { align: C, bold: true, size: 28, after: 400 })];
+  const logo = $("laporan").querySelector("img.logo");
+  if (logo && logo.naturalWidth > 0) { try { isi.push(new D.Paragraph({ alignment: C, spacing: { after: 500 }, children: [await gambarD(logo, 140, 140)] })); } catch (e) { /* tanpa logo */ } }
+  else isi.push(paraD("[LOGO SEKOLAH]", { align: C, after: 500, color: "555555" }));
+  isi.push(paraD("Disusun Oleh :", { align: C, after: 160 }));
+  [["Nama", nama], ["NIS / NISN", s.nis], ["KELAS", s.class_name], ["PROGRAM KEAHLIAN", s.major]].forEach(([a, b]) =>
+    isi.push(new D.Paragraph({ spacing: { line: 300, after: 40 }, indent: { left: 1100 }, tabStops: [{ type: D.TabStopType.LEFT, position: 4100 }], children: [new D.TextRun({ text: a + "\t: " + (b || ""), font: "Arial", size: 24 })] })));
+  isi.push(paraD("SMK NEGERI 1 SORONG", { align: C, bold: true, size: 28, before: 900, after: 0 }));
+  isi.push(paraD("TAHUN 2026", { align: C, bold: true, size: 28, after: 0 }));
+  const g = { style: D.BorderStyle.SINGLE, size: 48, color: garis.replace("#", "") };
+  return new D.Table({
+    width: { size: SISI, type: D.WidthType.DXA }, columnWidths: [SISI],
+    rows: [new D.TableRow({ cantSplit: true, height: { value: 12600, rule: D.HeightRule.ATLEAST }, children: [new D.TableCell({
+      width: { size: SISI, type: D.WidthType.DXA }, borders: { top: g, bottom: g, left: g, right: g },
+      shading: { type: D.ShadingType.CLEAR, fill: bg.replace("#", ""), color: "auto" }, children: isi })] })]
+  });
+}
+async function blokD(node) {
+  const D = window.docx, cl = node.classList, J = D.AlignmentType.JUSTIFIED, out = [];
+  if (cl.contains("pengesahan")) return [pengesahanD(node)];
+  if (cl.contains("isi-daftar")) return [barisDaftarD(node)];
+  if (cl.contains("foto-grid")) { for (const f of Array.from(node.children)) out.push(...await figurD(f)); return out; }
+  if (node.tagName === "H2") return [paraD(node.textContent, { align: D.AlignmentType.CENTER, bold: true, size: 28, keepNext: true, after: 60 })];
+  if (node.tagName === "H3") return [paraD(node.textContent, { bold: true, before: 240, after: 80, keepNext: true })];
+  if (node.tagName === "FIGURE") return await figurD(node);
+  if (node.tagName === "TABLE") return [tabelD(node), paraD("", { after: 120, line: 240 })];
+  if (node.tagName === "P") {
+    const kosong = cl.contains("kosong"), rata = cl.contains("tengah") ? D.AlignmentType.CENTER : node.style.textAlign === "right" ? D.AlignmentType.RIGHT : J;
+    const baris = node.textContent.split("\n");
+    return baris.map((b, i) => paraD(b, { align: rata, italics: kosong, color: kosong ? "888888" : undefined, after: i === baris.length - 1 ? 120 : 0 }));
+  }
+  return out;
+}
+async function unduhWord() {
+  const info = $("info-word"), tombol = $("btn-word"), D = window.docx;
+  info.textContent = "";
+  if (!D) { info.textContent = "Fitur Word belum bisa dimuat (periksa koneksi internet), coba muat ulang halaman."; return; }
+  tombol.disabled = true; tombol.textContent = "Menyusun file Word...";
+  try {
+    const halamanAll = Array.from($("laporan").children).filter(x => x.classList.contains("halaman"));
+    const cover = await sampulD(), isi = [];
+    for (const h of halamanAll.slice(1)) {
+      const bagian = [];
+      for (const n of Array.from(h.children)) bagian.push(...await blokD(n));
+      if (bagian[0] && bagian[0] instanceof D.Paragraph) bagian[0] = (() => { const b = Array.from(h.children)[0]; return paraD(b.textContent, { align: D.AlignmentType.CENTER, bold: true, size: 28, keepNext: true, after: 60, pageBreakBefore: halamanAll.indexOf(h) > 1 }); })();
+      isi.push(...bagian);
+    }
+    const halamanA4 = { size: { width: 11906, height: 16838 }, margin: { top: 1701, bottom: 1701, left: 2268, right: 1701 } };
+    const dok = new D.Document({
+      creator: "JEJAK", title: "Laporan PKL " + nama,
+      styles: { default: { document: { run: { font: "Arial", size: 24 } } } },
+      sections: [
+        { properties: { page: halamanA4 }, children: [cover] },
+        { properties: { type: D.SectionType.NEXT_PAGE, page: Object.assign({ pageNumbers: { start: 1 } }, halamanA4) },
+          footers: { default: new D.Footer({ children: [new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [new D.TextRun({ children: [D.PageNumber.CURRENT], font: "Arial", size: 22 })] })] }) },
+          children: isi }
+      ]
+    });
+    const blob = await D.Packer.toBlob(dok);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "Laporan PKL - " + nama + ".docx";
+    document.body.appendChild(a); a.click(); a.remove();
+    info.textContent = "File Word sudah diunduh. Buka dengan Word atau Google Docs, lalu periksa dan rapikan tampilannya.";
+  } catch (e) {
+    info.textContent = "Gagal menyusun file Word: " + (e.message || e);
+  }
+  tombol.disabled = false; tombol.textContent = "Unduh Word (.docx)";
+}
+$("btn-word").addEventListener("click", unduhWord);
+$("btn-cetak").addEventListener("click", () => window.print());
+</script>
+</body>
+</html>
