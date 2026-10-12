@@ -14,9 +14,12 @@
   h3.sub { font-size:12pt; font-weight:700; margin:18px 0 6px; }
   p.isi { text-align:justify; white-space:pre-wrap; margin:0 0 8px; }
   .kosong { color:#888; font-style:italic; }
-  .sampul { border:10px solid; min-height:21cm; display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding:28px 20px; text-align:center; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .sampul { border:3px solid #000; background:#fff; min-height:21cm; display:flex; flex-direction:column; justify-content:space-between; align-items:center; padding:28px 20px; text-align:center; }
   .sampul h1 { font-size:14pt; margin:4px 0; }
   .sampul h2 { font-size:14pt; margin:2px 0; }
+  .sampul table.info { width:85%; margin:0 auto; }
+  .sampul table.info td { text-align:left; }
+  .sampul table.info td:first-child { width:44%; white-space:nowrap; }
   .logo { height:110px; } .logo-kosong { width:110px; height:110px; border:2px dashed #555; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:10pt; }
   table { border-collapse:collapse; width:100%; }
   table.data th, table.data td, table.ttd th, table.ttd td { border:1px solid #000; padding:4px 6px; font-size:11pt; line-height:1.3; vertical-align:top; }
@@ -52,7 +55,8 @@
     <div id="peringatan"></div>
     <button type="button" id="btn-cetak">Cetak / Simpan PDF</button> <button type="button" id="btn-word" style="background:#fff;color:#1F6F5C;border:1px solid #1F6F5C">Unduh Word (.docx)</button>
     <p id="info-word" class="redup" role="alert" style="margin:8px 0 0"></p>
-    <p class="redup" style="font-size:.9rem">Di jendela cetak: pilih <b>Simpan sebagai PDF</b>, ukuran <b>A4</b>, margin <b>Default</b>, dan matikan <b>Headers and footers</b>. Kalau warna sampul tidak muncul, aktifkan <b>Background graphics</b>. Daftar Isi tidak memuat nomor halaman, jadi isi manual setelah dicetak. File Word bisa diedit di Word atau Google Docs; periksa dan rapikan tampilannya setelah diunduh.</p>
+    <p id="tip-warna" style="margin:8px 0 0; font-weight:600"></p>
+    <p class="redup" style="font-size:.9rem">Di jendela cetak: pilih <b>Simpan sebagai PDF</b>, ukuran <b>A4</b>, margin <b>Default</b>, dan matikan <b>Headers and footers</b>. Daftar Isi tidak memuat nomor halaman, jadi isi manual setelah dicetak. File Word bisa diedit di Word atau Google Docs; periksa dan rapikan tampilannya setelah diunduh.</p>
   </div>
   <div id="laporan">Memuat data...</div>
 </main>
@@ -66,7 +70,7 @@ const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const JADWAL = { senin_jumat: [1, 2, 3, 4, 5], senin_sabtu: [1, 2, 3, 4, 5, 6], setiap_hari: [0, 1, 2, 3, 4, 5, 6] };
 const JADWAL_TEKS = { senin_jumat: "Senin sampai Jumat", senin_sabtu: "Senin sampai Sabtu", setiap_hari: "setiap hari" };
 const LABEL = { "Asia/Jayapura": "WIT", "Asia/Makassar": "WITA", "Asia/Jakarta": "WIB" };
-const WARNA = { Pemasaran: ["#F4B6B0", "#B3261E"], AKL: ["#BFE3B8", "#2E7D32"], MPLB: ["#FFF0A8", "#B58900"], TP: ["#D9BFEF", "#6A3FA0"], TJKT: ["#BFE3F5", "#1F78A8"], PPLG: ["#BFE3F5", "#1F78A8"], DKV: ["#BFE3F5", "#1F78A8"] };
+const WARNA_JILID = { Pemasaran: "merah", AKL: "hijau", MPLB: "kuning", TP: "ungu", TJKT: "biru muda", PPLG: "biru muda", DKV: "biru muda" };
 const BAGIAN = { kata_pengantar: "Kata Pengantar", latar_belakang: "1.1 Latar Belakang", tujuan: "1.2 Tujuan", rumusan_masalah: "1.3 Rumusan Masalah", profil_dunia_kerja: "2.1 Profil Dunia Kerja", hasil_pelaksanaan: "2.4 Hasil Pelaksanaan", kesimpulan: "3.1 Kesimpulan", saran: "3.2 Saran" };
 let s, nama, guru, lap = {}, absen = {}, jurnal = [], foto = [];
 
@@ -128,9 +132,8 @@ function teks(induk, isi) {
 }
 
 function sampul() {
-  const [bg, garis] = WARNA[s.program_kode] || ["#E5E7EB", "#555555"];
   const h = halaman(); h.classList.add("sampul-halaman");
-  const k = el("div", null, "sampul"); k.style.background = bg; k.style.borderColor = garis;
+  const k = el("div", null, "sampul");
   const atas = el("div"); atas.appendChild(el("h1", "LAPORAN HASIL PRAKTIK KERJA LAPANGAN")); atas.appendChild(el("h1", "PADA " + (s.company_name || "").toUpperCase()));
   const logo = el("div");
   const img = document.createElement("img"); img.src = "logo.png"; img.alt = "Logo SMK Negeri 1 Sorong"; img.className = "logo";
@@ -228,12 +231,12 @@ function jurnalHarian() {
     foto = ft.data.filter(f => url[f.file_url]).map(f => ({ kode: f.id.slice(0, 6).toLowerCase(), url: url[f.file_url], tanggal: f.journals.activity_date, judul: f.journals.activity_title })).sort((a, b) => a.tanggal.localeCompare(b.tanggal));
   }
   const kosong = Object.keys(BAGIAN).filter(k => !lap[k]).map(k => BAGIAN[k]);
-  if (kosong.length || !s.program_kode) {
+  if (kosong.length) {
     const p = el("div", null, "peringatan");
     if (kosong.length) { p.appendChild(el("p", "Bagian yang belum diisi: " + kosong.join(", ") + ". ")); const a = el("a", "Isi sekarang"); a.href = "laporan.html"; p.appendChild(a); }
-    if (!s.program_kode) p.appendChild(el("p", "Kode program keahlian belum diisi admin, jadi sampul berwarna abu-abu."));
     $("peringatan").appendChild(p);
   }
+  if (s.program_kode) $("tip-warna").textContent = "Saat menjilid, pilih plastik sampul berwarna " + WARNA_JILID[s.program_kode] + " (program " + s.program_kode + "). Kertas sampul yang dicetak tetap putih.";
   $("laporan").textContent = "";
   [sampul(), pengesahan(), kataPengantar(), daftarIsi(), bab1(), bab2(), bab3(), biodata(), dokumentasi(), ...jurnalHarian()].forEach(x => $("laporan").appendChild(x));
 })();
@@ -307,7 +310,7 @@ function barisDaftarD(div) {
   });
 }
 async function sampulD() {
-  const D = window.docx, [bg, garis] = WARNA[s.program_kode] || ["#E5E7EB", "#555555"], C = D.AlignmentType.CENTER;
+  const D = window.docx, C = D.AlignmentType.CENTER;
   const isi = [paraD("LAPORAN HASIL PRAKTIK KERJA LAPANGAN", { align: C, bold: true, size: 28, before: 200, after: 0 }),
                paraD("PADA " + (s.company_name || "").toUpperCase(), { align: C, bold: true, size: 28, after: 400 })];
   const logo = $("laporan").querySelector("img.logo");
@@ -318,12 +321,12 @@ async function sampulD() {
     isi.push(new D.Paragraph({ spacing: { line: 300, after: 40 }, indent: { left: 1100 }, tabStops: [{ type: D.TabStopType.LEFT, position: 4100 }], children: [new D.TextRun({ text: a + "\t: " + (b || ""), font: "Arial", size: 24 })] })));
   isi.push(paraD("SMK NEGERI 1 SORONG", { align: C, bold: true, size: 28, before: 900, after: 0 }));
   isi.push(paraD("TAHUN 2026", { align: C, bold: true, size: 28, after: 0 }));
-  const g = { style: D.BorderStyle.SINGLE, size: 48, color: garis.replace("#", "") };
+  const g = { style: D.BorderStyle.SINGLE, size: 18, color: "000000" };
   return new D.Table({
     width: { size: SISI, type: D.WidthType.DXA }, columnWidths: [SISI],
     rows: [new D.TableRow({ cantSplit: true, height: { value: 12600, rule: D.HeightRule.ATLEAST }, children: [new D.TableCell({
       width: { size: SISI, type: D.WidthType.DXA }, borders: { top: g, bottom: g, left: g, right: g },
-      shading: { type: D.ShadingType.CLEAR, fill: bg.replace("#", ""), color: "auto" }, children: isi })] })]
+      children: isi })] })]
   });
 }
 async function blokD(node) {
