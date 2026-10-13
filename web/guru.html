@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1F6F5C">
 <title>Dashboard Guru - JEJAK</title>
 <link rel="stylesheet" href="style.css">
 <style>
@@ -15,12 +16,15 @@
 </head>
 <body>
 <header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
-<main>
-  <h1>Dashboard Guru</h1>
-  <p class="redup">Pantau siswa bimbinganmu. Ketuk nama siswa untuk melihat jurnal dan memberi tanggapan.</p>
+<main class="lebar">
+  <section class="hero">
+    <div><h1>Dashboard Guru</h1><p class="redup">Pantau siswa bimbinganmu. Ketuk nama siswa untuk melihat jurnal dan memberi tanggapan.</p></div>
+    <img src="gambar-jejak.svg" alt="" width="150" height="83">
+  </section>
   <p id="ringkas" class="ringkas"></p>
   <div id="daftar" class="kartu">Memuat data...</div>
 </main>
+<footer class="kaki">JEJAK &middot; SMK Negeri 1 Sorong</footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>

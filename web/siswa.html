@@ -3,16 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1F6F5C">
 <title>Dashboard Siswa - JEJAK</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
-<main>
-  <h1>Dashboard Siswa</h1>
-  <p class="redup">Data PKL dan kehadiran kamu.</p>
+<main class="lebar">
+  <section class="hero">
+    <div><h1>Dashboard Siswa</h1><p class="redup">Data PKL dan kehadiran kamu.</p></div>
+    <img src="gambar-jejak.svg" alt="" width="150" height="83">
+  </section>
   <div class="kartu" id="info">Memuat data...</div>
 
+  <div class="dua">
   <div class="kartu">
     <b>Kehadiran hari ini</b>
     <p id="status-hari-ini" class="redup">Memuat...</p>
@@ -24,13 +28,17 @@
     <b>Riwayat kehadiran</b>
     <ul id="riwayat"></ul>
   </div>
+  </div>
 
-  <div class="kartu"><b>Jurnal kegiatan</b><p class="redup">Catat kegiatan dan refleksi harianmu.</p><a href="jurnal.html" style="display:inline-block;background:#1F6F5C;color:#fff;padding:10px 16px;border-radius:6px;font-weight:600;text-decoration:none">Isi dan lihat jurnal</a></div>
-  <div class="kartu"><b>Bukti &amp; Arsip PKL</b><p class="redup">Foto kegiatan, sertifikat, raport, lembar penilaian, dan dokumen PKL lainnya.</p><a href="arsip.html" style="display:inline-block;padding:10px 16px;border-radius:6px;font-weight:600;text-decoration:none;margin:4px 8px 0 0;background:#1F6F5C;color:#fff">Buka arsip</a><a href="arsip.html#dokumen" style="display:inline-block;padding:10px 16px;border-radius:6px;font-weight:600;text-decoration:none;margin:4px 8px 0 0;background:#fff;color:#1F6F5C;border:1px solid #1F6F5C">Tambah dokumen</a></div>
-  <div class="kartu"><b>Cetak dokumen</b><p class="redup">Daftar Hadir dan Daftar Kegiatan Harian dalam format sekolah, siap ditandatangani.</p><a href="cetak.html" style="display:inline-block;padding:10px 16px;border-radius:6px;font-weight:600;text-decoration:none;background:#1F6F5C;color:#fff">Buka cetak dokumen</a></div>
-  <div class="kartu"><b>Perkembangan</b><p class="redup">Lihat jurnal per minggu, tingkat pemahaman, dan rekap kehadiranmu.</p><a href="perkembangan.html" style="display:inline-block;padding:10px 16px;border-radius:6px;font-weight:600;text-decoration:none;background:#1F6F5C;color:#fff">Lihat perkembangan</a></div>
-  <div class="kartu"><b>Laporan PKL</b><p class="redup">Tulis bagian laporan sesuai format sekolah. Bagian lain terisi otomatis dari jurnalmu.</p><a href="laporan.html" style="display:inline-block;padding:10px 16px;border-radius:6px;font-weight:600;text-decoration:none;background:#1F6F5C;color:#fff">Isi laporan</a> <a href="laporan-cetak.html" style="display:inline-block;padding:10px 16px;border-radius:6px;font-weight:600;text-decoration:none;margin:4px 8px 0 0;background:#fff;color:#1F6F5C;border:1px solid #1F6F5C">Lihat dan cetak laporan</a></div>
+  <div class="menu-grid">
+    <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 8h7M8 12h7"/></svg></span><div><b>Jurnal kegiatan</b><p class="redup">Catat kegiatan dan refleksi harianmu.</p><a class="tombol" href="jurnal.html">Isi dan lihat jurnal</a></div></div>
+    <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><div><b>Bukti &amp; Arsip PKL</b><p class="redup">Foto kegiatan, sertifikat, raport, lembar penilaian, dan dokumen PKL lainnya.</p><a class="tombol" href="arsip.html">Buka arsip</a><a class="tombol sekunder" href="arsip.html#dokumen">Tambah dokumen</a></div></div>
+    <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg></span><div><b>Cetak dokumen</b><p class="redup">Daftar Hadir dan Daftar Kegiatan Harian dalam format sekolah, siap ditandatangani.</p><a class="tombol" href="cetak.html">Buka cetak dokumen</a></div></div>
+    <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-7M22 20H2"/></svg></span><div><b>Perkembangan</b><p class="redup">Lihat jurnal per minggu, tingkat pemahaman, dan rekap kehadiranmu.</p><a class="tombol" href="perkembangan.html">Lihat perkembangan</a></div></div>
+    <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg></span><div><b>Laporan PKL</b><p class="redup">Tulis bagian laporan sesuai format sekolah. Bagian lain terisi otomatis dari jurnalmu.</p><a class="tombol" href="laporan.html">Isi laporan</a><a class="tombol sekunder" href="laporan-cetak.html">Lihat dan cetak laporan</a></div></div>
+  </div>
 </main>
+<footer class="kaki">JEJAK &middot; SMK Negeri 1 Sorong</footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>

@@ -16,3 +16,35 @@ form button { width:100%; margin-top:18px; }
 button:focus-visible, input:focus-visible { outline:3px solid #86C5B4; outline-offset:2px; }
 .galat { color:var(--galat); font-weight:600; min-height:1.5em; margin-top:12px; }
 ul { padding-left:20px; margin:8px 0 0; }
+
+/* ===== Tampilan tambahan: ilustrasi, ikon menu, tata letak lebar ===== */
+:root { --aksen-muda:#E3F1EC; --aksen-gelap:#17564A; }
+.kartu { box-shadow:0 1px 2px rgba(27,39,51,.06); }
+main.lebar { max-width:900px; }
+.hero { display:flex; align-items:center; justify-content:space-between; gap:16px; background:var(--aksen-muda); border:1px solid #CFE6DC; border-radius:12px; padding:14px 18px; margin:0 0 16px; overflow:hidden; }
+.hero h1 { margin:0 0 2px; }
+.hero p { margin:0; }
+.hero img { width:150px; max-width:36%; height:auto; flex:none; }
+.tombol { display:inline-block; padding:10px 16px; border-radius:6px; font-weight:600; text-decoration:none; background:var(--aksen); color:#fff; margin:4px 8px 0 0; }
+.tombol.sekunder { background:#fff; color:var(--aksen); border:1px solid var(--aksen); }
+.tombol:focus-visible { outline:3px solid #86C5B4; outline-offset:2px; }
+.menu-grid, .dua { display:grid; gap:12px; margin:12px 0; }
+.menu-grid .kartu, .dua .kartu { margin:0; }
+.menu { display:flex; gap:14px; align-items:flex-start; }
+.menu .ikon { flex:none; width:46px; height:46px; border-radius:12px; background:var(--aksen-muda); color:var(--aksen); display:flex; align-items:center; justify-content:center; }
+.menu .ikon svg { width:26px; height:26px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.menu > div { flex:1; min-width:0; }
+.menu p { margin:2px 0 8px; }
+.masuk { display:grid; gap:18px; align-items:center; }
+.masuk .ilustrasi { background:var(--aksen-muda); border:1px solid #CFE6DC; border-radius:16px; padding:0; overflow:hidden; }
+.masuk .ilustrasi img { display:block; width:100%; height:auto; }
+.lebar #daftar { display:grid; gap:12px; }
+.lebar #daftar .kartu { margin:0; }
+footer.kaki { text-align:center; color:var(--redup); font-size:.85rem; padding:8px 16px 28px; }
+@media (min-width:760px) {
+  .menu-grid, .dua { grid-template-columns:1fr 1fr; }
+  .lebar #daftar { grid-template-columns:1fr 1fr; }
+  .masuk { grid-template-columns:1.1fr 1fr; gap:32px; }
+  main.masuk-halaman { max-width:960px; padding-top:36px; }
+}
+@media (max-width:420px) { .hero img { display:none; } }
