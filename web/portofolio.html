@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1F6F5C">
+<title>Portofolio - JEJAK</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  main.lebar { max-width:1060px; }
+  .susun { display:grid; gap:16px; }
+  @media (min-width:900px) { .susun { grid-template-columns:360px 1fr; align-items:start; } }
+  textarea { width:100%; padding:11px 12px; font:inherit; border:1px solid var(--garis); border-radius:6px; background:#fff; min-height:90px; }
+  .petunjuk { color:var(--redup); font-size:.88rem; margin:0 0 4px; }
+  .ok { color:var(--aksen); font-weight:600; min-height:1.5em; margin-top:10px; }
+  .pilih-j { border-top:1px solid var(--garis); padding:8px 0; }
+  .pilih-j > label { display:flex; gap:8px; font-weight:600; align-items:flex-start; margin:0; }
+  .pilih-j input[type=checkbox] { width:auto; margin-top:4px; }
+  .thumbs { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 0 26px; }
+  .thumbs label { display:flex; flex-direction:column; align-items:center; gap:2px; font-weight:400; font-size:.78rem; margin:0; }
+  .thumbs input { width:auto; }
+  .thumbs img { width:60px; height:60px; object-fit:cover; border-radius:6px; border:1px solid var(--garis); }
+  .barisbtn { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  #pratinjau { background:#fff; border:1px solid var(--garis); font-family:Arial, Helvetica, sans-serif; color:#1B2733; max-width:794px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  #pratinjau .atas { background:#1F6F5C; color:#fff; padding:26px 32px 20px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #pratinjau .atas small { letter-spacing:.14em; font-size:11px; opacity:.85; }
+  #pratinjau .atas h1 { margin:4px 0 2px; font-size:28px; color:#fff; }
+  #pratinjau .atas p { margin:0; font-size:13px; }
+  #pratinjau .isi { padding:16px 32px 18px; }
+  #pratinjau .info { display:flex; gap:10px; margin-bottom:12px; }
+  #pratinjau .info div { flex:1; background:#E3F1EC; border-radius:8px; padding:8px 10px; font-size:12px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #pratinjau .info b { display:block; font-size:10px; color:#17564A; margin-bottom:2px; letter-spacing:.04em; }
+  #pratinjau h2 { font-size:13px; color:#1F6F5C; border-bottom:2px solid #E3F1EC; padding-bottom:3px; margin:12px 0 6px; letter-spacing:.04em; }
+  #pratinjau p.t { font-size:12.5px; line-height:1.5; margin:0; white-space:pre-wrap; }
+  #pratinjau ul { margin:0; padding-left:18px; font-size:12.5px; line-height:1.5; }
+  #pratinjau .chip { display:inline-block; border:1px solid #1F6F5C; color:#17564A; border-radius:99px; padding:2px 10px; font-size:11.5px; margin:0 5px 5px 0; }
+  #pratinjau .kartu2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  #pratinjau .k { border:1px solid #D5DCE3; border-radius:8px; overflow:hidden; break-inside:avoid; }
+  #pratinjau .k img { width:100%; height:96px; object-fit:cover; display:block; }
+  #pratinjau .k .b { padding:7px 9px; font-size:11.5px; line-height:1.4; }
+  #pratinjau .k b { display:block; font-size:12.5px; margin:1px 0 2px; }
+  #pratinjau .tgl { color:#5B6B7A; font-size:10.5px; }
+  #pratinjau .kaki { display:flex; justify-content:space-between; gap:12px; font-size:10.5px; color:#5B6B7A; border-top:1px solid #D5DCE3; padding-top:6px; margin-top:14px; }
+  #pratinjau .kosong { color:#8a97a3; font-style:italic; }
+  @page { size:A4; margin:10mm; }
+  @media print {
+    header, .tidak-cetak, footer.kaki-situs { display:none !important; }
+    body { background:#fff; } main { max-width:none; padding:0; }
+    .susun { display:block; }
+    #pratinjau { border:0; box-shadow:none; max-width:none; }
+    #pratinjau .kosong { display:none; }
+  }
+</style>
+</head>
+<body>
+<header><a class="merek" href="siswa.html" aria-label="JEJAK"><b>JEJAK</b></a><span class="pengguna"><span class="avatar" id="avatar" aria-hidden="true"></span><span class="sapa"><span class="halo">Halo, </span><span id="nama"></span></span><button class="keluar" onclick="keluar()">Keluar <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/></svg></button></span></header>
+<main class="lebar">
+  <div class="tidak-cetak">
+    <p><a href="siswa.html">&larr; Dashboard</a></p>
+    <h1>Portofolio Ringkas</h1>
+    <p class="redup">Satu halaman untuk melamar magang, kerja, atau kuliah. Bersifat privat dan tidak ada tautan publik.</p>
+  </div>
+  <div class="susun">
+    <div class="tidak-cetak">
+      <div class="kartu">
+        <b>Kegiatan unggulan (maksimal 4)</b>
+        <p class="petunjuk">Centang jurnal terbaikmu, lalu pilih foto yang tampil.</p>
+        <div class="barisbtn"><button type="button" id="btn-saran" class="tombol sekunder" style="margin:0">Saran otomatis</button></div>
+        <div id="daftar-jurnal">Memuat...</div>
+      </div>
+      <div class="kartu">
+        <label for="tentang">Tentang saya</label>
+        <p class="petunjuk">3 sampai 5 kalimat tentang dirimu dan tujuanmu.</p>
+        <textarea id="tentang" maxlength="500"></textarea>
+        <label for="capaian">Capaian selama PKL</label>
+        <p class="petunjuk">Satu capaian per baris (3 sampai 5 baris).</p>
+        <textarea id="capaian" maxlength="600"></textarea>
+        <label for="keterampilan">Keterampilan</label>
+        <p class="petunjuk">Pisahkan dengan koma, misalnya: Prosedur K3, Pencatatan data.</p>
+        <input id="keterampilan" maxlength="200">
+        <label for="kontak">Kontak (opsional)</label>
+        <p class="petunjuk">Email atau nomor yang ingin ditampilkan. Kosongkan jika tidak mau.</p>
+        <input id="kontak" maxlength="80">
+        <div id="pesan" class="galat" role="alert"></div>
+        <div class="barisbtn">
+          <button type="button" id="btn-simpan">Simpan portofolio</button>
+          <button type="button" id="btn-cetak" class="tombol sekunder" style="margin:0">Cetak / Simpan PDF</button>
+        </div>
+        <p class="petunjuk" style="margin-top:8px">Di jendela cetak pilih Simpan sebagai PDF, ukuran A4, dan matikan Headers and footers.</p>
+      </div>
+    </div>
+    <div id="pratinjau" aria-label="Pratinjau portofolio"></div>
+  </div>
+</main>
+<footer class="kaki kaki-situs">JEJAK &middot; SMK Negeri 1 Sorong</footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const tglP = d => new Date(d + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+function el(tag, teks, kelas) { const e = document.createElement(tag); if (teks != null) e.textContent = teks; if (kelas) e.className = kelas; return e; }
+function potong(t, n) { t = (t || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1).trimEnd() + "\u2026" : t; }
+let s, nama, jurnal = [], fotoJ = {}, url = {}, docs = [], hadir = 0, terpilih = [], fotoPilih = {};
+
+function pratinjau() {
+  const p = $("pratinjau"); p.textContent = "";
+  const atas = el("div", null, "atas");
+  atas.appendChild(el("small", "PORTOFOLIO PKL")); atas.appendChild(el("h1", nama));
+  atas.appendChild(el("p", [s.major, "SMK Negeri 1 Sorong"].filter(Boolean).join(" \u00b7 ")));
+  p.appendChild(atas);
+  const isi = el("div", null, "isi"); p.appendChild(isi);
+  const info = el("div", null, "info");
+  [["TEMPAT PKL", s.company_name || "-"], ["PERIODE", s.pkl_start_date && s.pkl_end_date ? tglP(s.pkl_start_date) + " - " + tglP(s.pkl_end_date) : "-"], ["KEHADIRAN", hadir + " hari hadir"]].forEach(([a, b]) => {
+    const d = el("div"); d.appendChild(el("b", a)); d.appendChild(document.createTextNode(b)); info.appendChild(d);
+  });
+  isi.appendChild(info);
+  const tentang = $("tentang").value.trim();
+  isi.appendChild(el("h2", "TENTANG SAYA")); isi.appendChild(el("p", tentang || "(Isi bagian Tentang saya)", "t" + (tentang ? "" : " kosong")));
+  const capaian = $("capaian").value.split("\n").map(x => x.trim()).filter(Boolean).slice(0, 6);
+  isi.appendChild(el("h2", "CAPAIAN SELAMA PKL"));
+  if (capaian.length) { const ul = el("ul"); capaian.forEach(c => ul.appendChild(el("li", c))); isi.appendChild(ul); } else isi.appendChild(el("p", "(Isi bagian Capaian)", "t kosong"));
+  const kt = $("keterampilan").value.split(",").map(x => x.trim()).filter(Boolean).slice(0, 12);
+  isi.appendChild(el("h2", "KETERAMPILAN"));
+  if (kt.length) { const d = el("div"); kt.forEach(k => d.appendChild(el("span", k, "chip"))); isi.appendChild(d); } else isi.appendChild(el("p", "(Isi bagian Keterampilan)", "t kosong"));
+  isi.appendChild(el("h2", "KEGIATAN UNGGULAN"));
+  if (terpilih.length) {
+    const g = el("div", null, "kartu2");
+    terpilih.forEach(id => {
+      const j = jurnal.find(x => x.id === id); if (!j) return;
+      const k = el("div", null, "k");
+      const f = (fotoJ[id] || []).find(x => x.id === fotoPilih[id]);
+      if (f && url[f.path]) { const i = document.createElement("img"); i.src = url[f.path]; i.alt = "Foto kegiatan: " + j.activity_title; k.appendChild(i); }
+      const b = el("div", null, "b");
+      b.appendChild(el("span", tglP(j.activity_date), "tgl")); b.appendChild(el("b", j.activity_title));
+      b.appendChild(el("div", potong(j.activity_description, 120)));
+      const l = el("div"); const it = el("i", "Yang dipelajari: "); l.appendChild(it); l.appendChild(document.createTextNode(potong(j.what_learned, 110))); b.appendChild(l);
+      k.appendChild(b); g.appendChild(k);
+    });
+    isi.appendChild(g);
+  } else isi.appendChild(el("p", "(Pilih kegiatan unggulan)", "t kosong"));
+  if (docs.length) { isi.appendChild(el("h2", "DOKUMEN PENDUKUNG")); isi.appendChild(el("p", docs.slice(0, 6).join(" \u00b7 ") + " (tersimpan di arsip JEJAK, tersedia saat diminta)", "t")); }
+  const kaki = el("div", null, "kaki"); kaki.appendChild(el("span", $("kontak").value.trim() ? "Kontak: " + $("kontak").value.trim() : "")); kaki.appendChild(el("span", "Dibuat dengan JEJAK")); isi.appendChild(kaki);
+}
+
+function thumbs(j) {
+  const t = el("div", null, "thumbs");
+  const opsi = [{ id: null, label: "Tanpa foto" }].concat((fotoJ[j.id] || []).map((f, i) => ({ id: f.id, path: f.path, label: "Foto " + (i + 1) })));
+  opsi.forEach(f => {
+    const l = document.createElement("label"), r = document.createElement("input");
+    r.type = "radio"; r.name = "foto-" + j.id; r.checked = (fotoPilih[j.id] == null ? null : fotoPilih[j.id]) === f.id;
+    r.addEventListener("change", () => { fotoPilih[j.id] = f.id; pratinjau(); });
+    l.appendChild(r);
+    if (f.path && url[f.path]) { const i = document.createElement("img"); i.src = url[f.path]; i.alt = f.label; l.appendChild(i); }
+    l.appendChild(el("span", f.label)); t.appendChild(l);
+  });
+  return t;
+}
+function susunDaftar() {
+  const box = $("daftar-jurnal"); box.textContent = "";
+  if (!jurnal.length) { box.textContent = "Belum ada jurnal. Isi jurnal dulu."; return; }
+  jurnal.forEach(j => {
+    const w = el("div", null, "pilih-j"), l = document.createElement("label"), cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = terpilih.includes(j.id);
+    cb.addEventListener("change", () => {
+      const pesan = $("pesan"); pesan.className = "galat"; pesan.textContent = "";
+      if (cb.checked) {
+        if (terpilih.length >= 4) { cb.checked = false; pesan.textContent = "Maksimal 4 kegiatan unggulan."; return; }
+        terpilih.push(j.id); fotoPilih[j.id] = (fotoJ[j.id] && fotoJ[j.id][0]) ? fotoJ[j.id][0].id : null;
+      } else { terpilih = terpilih.filter(x => x !== j.id); delete fotoPilih[j.id]; }
+      susunDaftar(); pratinjau();
+    });
+    l.appendChild(cb); l.appendChild(el("span", tglP(j.activity_date) + ": " + j.activity_title)); w.appendChild(l);
+    if (cb.checked && (fotoJ[j.id] || []).length) w.appendChild(thumbs(j));
+    box.appendChild(w);
+  });
+}
+
+$("btn-saran").addEventListener("click", () => {
+  const dasar = (jurnal.filter(j => (fotoJ[j.id] || []).length).length ? jurnal.filter(j => (fotoJ[j.id] || []).length) : jurnal).slice(0, 3);
+  terpilih = dasar.map(j => j.id); fotoPilih = {};
+  dasar.forEach(j => { fotoPilih[j.id] = (fotoJ[j.id] && fotoJ[j.id][0]) ? fotoJ[j.id][0].id : null; });
+  susunDaftar(); pratinjau();
+});
+["tentang", "capaian", "keterampilan", "kontak"].forEach(i => $(i).addEventListener("input", pratinjau));
+$("btn-cetak").addEventListener("click", () => window.print());
+$("btn-simpan").addEventListener("click", async () => {
+  const pesan = $("pesan"), tombol = $("btn-simpan");
+  pesan.className = "galat"; pesan.textContent = ""; tombol.disabled = true; tombol.textContent = "Menyimpan...";
+  const v = i => $(i).value.trim() || null;
+  const { error } = await db.from("portfolios").upsert({
+    student_id: s.id, tentang: v("tentang"), capaian: v("capaian"), keterampilan: v("keterampilan"), kontak: v("kontak"),
+    jurnal_ids: terpilih, foto_ids: terpilih.map(id => fotoPilih[id]).filter(Boolean), updated_at: new Date().toISOString()
+  }, { onConflict: "student_id" });
+  if (error) pesan.textContent = "Gagal menyimpan: " + error.message;
+  else { pesan.className = "ok"; pesan.textContent = "Tersimpan pukul " + new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + "."; }
+  tombol.disabled = false; tombol.textContent = "Simpan portofolio";
+});
+
+(async () => {
+  const profil = await wajibRole("siswa");
+  if (!profil) return;
+  nama = profil.full_name;
+  const [st, jr, ft, dk, ab, pf] = await Promise.all([
+    db.from("students").select("id, major, company_name, pkl_start_date, pkl_end_date").single(),
+    db.from("journals").select("id, activity_date, activity_title, activity_description, what_learned").order("activity_date", { ascending: false }).order("created_at", { ascending: false }).limit(200),
+    db.from("journal_photos").select("id, file_url, journal_id").limit(500),
+    db.from("documents").select("document_name").order("created_at", { ascending: false }).limit(20),
+    db.from("attendance").select("status").limit(1000),
+    db.from("portfolios").select("*").maybeSingle()
+  ]);
+  const galat = st.error || jr.error || ft.error || dk.error || ab.error || pf.error;
+  if (galat) { $("daftar-jurnal").textContent = "Data belum bisa dimuat: " + galat.message; return; }
+  s = st.data; jurnal = jr.data; hadir = ab.data.filter(a => a.status === "hadir").length;
+  docs = Array.from(new Set(dk.data.map(d => d.document_name)));
+  ft.data.forEach(f => { (fotoJ[f.journal_id] = fotoJ[f.journal_id] || []).push({ id: f.id, path: f.file_url }); });
+  if (ft.data.length) {
+    const { data: tautan } = await db.storage.from("bukti-jurnal").createSignedUrls(ft.data.map(f => f.file_url), 3600);
+    (tautan || []).forEach(t => { url[t.path] = t.signedUrl; });
+  }
+  const sv = pf.data;
+  if (sv) {
+    $("tentang").value = sv.tentang || ""; $("capaian").value = sv.capaian || ""; $("keterampilan").value = sv.keterampilan || ""; $("kontak").value = sv.kontak || "";
+    terpilih = (sv.jurnal_ids || []).filter(id => jurnal.some(j => j.id === id));
+    terpilih.forEach(id => { const f = (fotoJ[id] || []).find(x => (sv.foto_ids || []).includes(x.id)); fotoPilih[id] = f ? f.id : null; });
+  }
+  susunDaftar(); pratinjau();
+})();
+</script>
+</body>
+</html>

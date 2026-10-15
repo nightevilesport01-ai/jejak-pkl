@@ -15,12 +15,10 @@
 </style>
 </head>
 <body>
-<header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
+<header><a class="merek" href="#" aria-label="JEJAK"><b>JEJAK</b></a><span class="pengguna"><span class="avatar" id="avatar" aria-hidden="true"></span><span class="sapa"><span class="halo">Halo, </span><span id="nama"></span></span><button class="keluar" onclick="keluar()">Keluar <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/></svg></button></span></header>
 <main class="lebar">
-  <section class="hero">
-    <div><h1>Dashboard Guru</h1><p class="redup">Pantau siswa bimbinganmu. Ketuk nama siswa untuk melihat jurnal dan memberi tanggapan.</p></div>
-    <img src="gambar-jejak.svg" alt="" width="150" height="83">
-  </section>
+  <h1>Dashboard Guru</h1>
+  <p class="redup">Pantau siswa bimbinganmu. Ketuk nama siswa untuk melihat jurnal dan memberi tanggapan.</p>
   <p id="ringkas" class="ringkas"></p>
   <div id="daftar" class="kartu">Memuat data...</div>
 </main>

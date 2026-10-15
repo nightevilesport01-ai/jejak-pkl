@@ -48,3 +48,20 @@ footer.kaki { text-align:center; color:var(--redup); font-size:.85rem; padding:8
   main.masuk-halaman { max-width:960px; padding-top:36px; }
 }
 @media (max-width:420px) { .hero img { display:none; } }
+
+/* ===== v1.1: header bergambar, avatar, logo, ikon tombol ===== */
+header { background:#1F6F5C url(pola-header.svg) right center / cover no-repeat; }
+.merek { display:flex; align-items:center; gap:10px; color:#fff; text-decoration:none; }
+.merek b { font-size:1.2rem; letter-spacing:.04em; }
+.pengguna { display:flex; align-items:center; gap:10px; }
+.avatar { width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.18); border:2px solid rgba(255,255,255,.7); color:#fff; font-weight:700; font-size:.82rem; display:inline-flex; align-items:center; justify-content:center; flex:none; }
+.sapa { font-size:.95rem; }
+header .keluar { display:inline-flex; align-items:center; gap:6px; }
+header .keluar svg, button.ikon-tombol svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+button.ikon-tombol { display:inline-flex; align-items:center; gap:8px; }
+.logo-masuk { display:block; width:min(300px, 78%); height:auto; margin:6px auto 14px; }
+#info { padding-left:64px; min-height:58px; display:flex; align-items:center; background:#fff url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%231F6F5C%27 stroke-width=%271.8%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Crect x=%273%27 y=%275%27 width=%2718%27 height=%2714%27 rx=%272%27/%3E%3Ccircle cx=%279%27 cy=%2711%27 r=%272%27/%3E%3Cpath d=%27M6 16c.6-1.6 1.8-2.2 3-2.2s2.4.6 3 2.2M14 10h4M14 14h4%27/%3E%3C/svg%3E") no-repeat 18px center / 30px; }
+@media (max-width:480px) { .sapa .halo { display:none; } .sapa { font-size:.85rem; max-width:96px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } }
+
+.tombol.ikon-tombol { display:inline-flex; align-items:center; gap:8px; }
+.tombol.ikon-tombol svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }

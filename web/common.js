@@ -17,6 +17,8 @@ async function wajibRole(role) {
   if (!p) return null;
   if (p.role !== role) { location.href = HALAMAN[p.role]; return null; }
   document.getElementById("nama").textContent = p.full_name;
+  const av = document.getElementById("avatar");
+  if (av) av.textContent = p.full_name.split(" ").filter(Boolean).slice(0, 2).map(k => k[0].toUpperCase()).join("");
   return p;
 }
 

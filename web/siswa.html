@@ -8,12 +8,10 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header><b>JEJAK</b><span><span id="nama"></span> <button onclick="keluar()">Keluar</button></span></header>
+<header><a class="merek" href="#" aria-label="JEJAK"><b>JEJAK</b></a><span class="pengguna"><span class="avatar" id="avatar" aria-hidden="true"></span><span class="sapa"><span class="halo">Halo, </span><span id="nama"></span></span><button class="keluar" onclick="keluar()">Keluar <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/></svg></button></span></header>
 <main class="lebar">
-  <section class="hero">
-    <div><h1>Dashboard Siswa</h1><p class="redup">Data PKL dan kehadiran kamu.</p></div>
-    <img src="gambar-jejak.svg" alt="" width="150" height="83">
-  </section>
+  <h1>Dashboard Siswa</h1>
+  <p class="redup">Data PKL dan kehadiran kamu.</p>
   <div class="kartu" id="info">Memuat data...</div>
 
   <div class="dua">
@@ -36,6 +34,7 @@
     <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg></span><div><b>Cetak dokumen</b><p class="redup">Daftar Hadir dan Daftar Kegiatan Harian dalam format sekolah, siap ditandatangani.</p><a class="tombol" href="cetak.html">Buka cetak dokumen</a></div></div>
     <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-7M22 20H2"/></svg></span><div><b>Perkembangan</b><p class="redup">Lihat jurnal per minggu, tingkat pemahaman, dan rekap kehadiranmu.</p><a class="tombol" href="perkembangan.html">Lihat perkembangan</a></div></div>
     <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg></span><div><b>Laporan PKL</b><p class="redup">Tulis bagian laporan sesuai format sekolah. Bagian lain terisi otomatis dari jurnalmu.</p><a class="tombol" href="laporan.html">Isi laporan</a><a class="tombol sekunder" href="laporan-cetak.html">Lihat dan cetak laporan</a></div></div>
+    <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/></svg></span><div><b>Portofolio</b><p class="redup">Satu halaman ringkasan PKL untuk melamar magang, kerja, atau kuliah.</p><a class="tombol" href="portofolio.html">Buat portofolio</a></div></div>
   </div>
 </main>
 <footer class="kaki">JEJAK &middot; SMK Negeri 1 Sorong</footer>
@@ -46,7 +45,7 @@
 const WIT = "Asia/Jayapura"; // tanggal "hari ini" mengikuti aturan database (WIT)
 const LABEL = { "Asia/Jayapura": "WIT", "Asia/Makassar": "WITA", "Asia/Jakarta": "WIB" };
 let zona = WIT; // zona waktu tempat PKL siswa, diisi dari data siswa
-let siswaId = null;
+let siswaId = null, namaSiswa = "", perusahaan = "tempat PKL";
 
 // Format tampilan: "Rab, 7 Okt" dan "07.30"
 const tgl = d => new Date(d + "T00:00:00").toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" });
@@ -55,16 +54,26 @@ const hariIniWIT = () => new Date().toLocaleDateString("sv-SE", { timeZone: WIT 
 const pesan = t => { document.getElementById("pesan").textContent = t; };
 
 // Tombol yang dinonaktifkan sementara saat menyimpan (umpan balik loading)
-function buatTombol(teks, fn) {
+const IKON = {
+  cek: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>',
+  izin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M9 13h6M9 17h4"/></svg>',
+  sakit: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>',
+  pulang: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/></svg>',
+  kirim: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>'
+};
+function buatTombol(teks, fn, ikon) {
   const b = document.createElement("button");
   b.type = "button";
-  b.textContent = teks;
+  b.className = "ikon-tombol";
+  b.innerHTML = (ikon || "") + "<span></span>"; // ikon adalah teks tetap dari kode ini, bukan data pengguna
+  const label = b.querySelector("span");
+  label.textContent = teks;
   b.addEventListener("click", async () => {
     b.disabled = true;
-    b.textContent = "Menyimpan...";
+    label.textContent = "Menyimpan...";
     await fn();
     b.disabled = false;
-    b.textContent = teks;
+    label.textContent = teks;
   });
   return b;
 }
@@ -86,10 +95,25 @@ async function pulang() {
   await muat();
 }
 
+// Kabar ke orang tua: membuka WhatsApp dengan pesan siap kirim. Kontak dipilih siswa sendiri, JEJAK tidak menyimpan nomor.
+function tombolKabar(h) {
+  const hariTgl = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: WIT });
+  const z = LABEL[zona];
+  let teks;
+  if (h.status === "hadir" && h.check_out) teks = "Halo, saya " + namaSiswa + " sudah pulang dari " + perusahaan + " pukul " + jam(h.check_out) + " " + z + " (masuk pukul " + jam(h.check_in) + "), " + hariTgl + ".";
+  else if (h.status === "hadir") teks = "Halo, saya " + namaSiswa + " sudah tiba di " + perusahaan + " pukul " + jam(h.check_in) + " " + z + ", " + hariTgl + ".";
+  else teks = "Halo, hari ini (" + hariTgl + ") saya " + h.status + (h.reason ? ". Alasan: " + h.reason : "") + ".";
+  const a = document.createElement("a");
+  a.className = "tombol sekunder ikon-tombol"; a.target = "_blank"; a.rel = "noopener";
+  a.href = "https://wa.me/?text=" + encodeURIComponent(teks + "\n(dikirim dari JEJAK)");
+  a.innerHTML = IKON.kirim + "<span>Kirim kabar ke orang tua</span>";
+  return a;
+}
+
 // Ambil riwayat 14 hari terakhir, lalu tampilkan status dan tombol yang sesuai
 async function muat() {
   const { data, error } = await db.from("attendance")
-    .select("attendance_date, status, check_in, check_out")
+    .select("attendance_date, status, reason, check_in, check_out")
     .order("attendance_date", { ascending: false }).limit(14);
   if (error) { pesan("Kehadiran belum bisa dimuat: " + error.message); return; }
 
@@ -109,32 +133,42 @@ async function muat() {
 
   if (!h) {
     status.textContent = "Kamu belum check-in hari ini.";
-    aksi.appendChild(buatTombol("Check-in (Hadir)", () => catat("hadir", "")));
+    aksi.appendChild(buatTombol("Check-in (Hadir)", () => catat("hadir", ""), IKON.cek));
     const alasan = document.createElement("input");
     alasan.placeholder = "Alasan (wajib untuk izin atau sakit)";
     alasan.setAttribute("aria-label", "Alasan izin atau sakit");
     alasan.style.margin = "14px 0 8px";
     aksi.appendChild(alasan);
-    aksi.appendChild(buatTombol("Izin", () => catat("izin", alasan.value)));
+    aksi.appendChild(buatTombol("Izin", () => catat("izin", alasan.value), IKON.izin));
     aksi.append(" ");
-    aksi.appendChild(buatTombol("Sakit", () => catat("sakit", alasan.value)));
+    aksi.appendChild(buatTombol("Sakit", () => catat("sakit", alasan.value), IKON.sakit));
   } else if (h.status === "hadir" && !h.check_out) {
     status.textContent = "Hadir, masuk pukul " + jam(h.check_in) + " " + LABEL[zona] + ".";
-    aksi.appendChild(buatTombol("Check-out (Pulang)", pulang));
+    aksi.appendChild(buatTombol("Check-out (Pulang)", pulang, IKON.pulang));
   } else if (h.status === "hadir") {
     status.textContent = "Hadir, masuk " + jam(h.check_in) + ", pulang " + jam(h.check_out) + " " + LABEL[zona] + ". Sampai besok!";
   } else {
     status.textContent = "Tercatat " + h.status + " hari ini.";
   }
+  if (h) {
+    aksi.appendChild(tombolKabar(h));
+    const n = document.createElement("p");
+    n.className = "redup"; n.style.cssText = "font-size:.85rem;margin:6px 0 0";
+    n.textContent = "Kamu memilih sendiri kontaknya di WhatsApp. JEJAK tidak menyimpan nomor.";
+    aksi.appendChild(n);
+  }
 }
 
 (async () => {
-  if (!await wajibRole("siswa")) return;
+  const profil = await wajibRole("siswa");
+  if (!profil) return;
+  namaSiswa = profil.full_name;
   const { data, error } = await db.from("students")
     .select("id, nis, class_name, company_name, industry_supervisor, zona_waktu").single();
   const el = document.getElementById("info");
   if (error) { el.textContent = "Data belum bisa dimuat: " + error.message; return; }
   siswaId = data.id;
+  perusahaan = data.company_name || perusahaan;
   zona = data.zona_waktu || WIT;
   el.textContent = "NIS " + data.nis + ", kelas " + data.class_name + ". PKL di " + data.company_name + " (pembimbing industri: " + data.industry_supervisor + ").";
   await muat();

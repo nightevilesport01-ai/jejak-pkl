@@ -8,16 +8,12 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header><b>JEJAK</b></header>
-<main class="masuk-halaman">
- <div class="masuk">
-  <div>
-    <div class="ilustrasi"><img src="gambar-jejak.svg" alt="Jejak langkah menuju tujuan" width="360" height="200"></div>
-    <h1 style="margin-top:16px">Rekam jejak PKL kamu</h1>
-    <p class="redup">Catat kegiatan, simpan bukti dan dokumen, lalu cetak laporan sesuai format sekolah.</p>
-  </div>
+<header><a class="merek" href="#" aria-label="JEJAK"><b>JEJAK</b></a></header>
+<main>
+  <img class="logo-masuk" src="logo-jejak.png" alt="Logo JEJAK PKL, SMK Negeri 1 Kota Sorong" width="300" height="163">
   <form id="form" class="kartu">
     <h2 style="margin:0 0 4px;font-size:1.2rem">Masuk ke JEJAK</h2>
+    <p class="redup" style="margin:0 0 8px">Rekam perjalanan PKL kamu, dari kegiatan sampai laporan.</p>
     <label for="email">Email</label>
     <input id="email" type="email" autocomplete="username" required>
     <label for="sandi">Password</label>
@@ -25,10 +21,8 @@
     <div id="pesan" class="galat" role="alert"></div>
     <button id="tombol" type="submit">Masuk</button>
   </form>
- </div>
 </main>
 <footer class="kaki">JEJAK &middot; SMK Negeri 1 Sorong</footer>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
