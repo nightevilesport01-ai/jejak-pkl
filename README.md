@@ -1,81 +1,107 @@
-# Starter Kit Lomba Aplikasi Web
+# JEJAK PKL: Rekam Perjalanan Siswa SMK
 
-**Perancangan dan Pengembangan Aplikasi Berbasis Web Berbantuan Artificial Intelligence (AI)**
-SMK Negeri 1 Sorong · 29 September 2026
-by : M. Dwiyanto Tobi, ST.,MT
+![Logo JEJAK PKL](web/logo-jejak.png)
 
-Kit ini buat bantu tim kalian bikin aplikasi bareng AI dengan cara yang **terarah, aman, dan bisa kalian jelaskan** di depan juri.
+Aplikasi web untuk mengelola perjalanan siswa selama Praktik Kerja Lapangan (PKL): kehadiran, jurnal refleksi, foto kegiatan, arsip dokumen, pantauan guru, dan cetak dokumen sesuai format sekolah.
 
-> **Materi lengkap sesi 29 September 2026 ada di [`MATERI-SISWA.md`](MATERI-SISWA.md).** Baca itu dulu, lalu pakai file-file di bawah saat mengerjakan proyek.
+**Tim:** [ISI nama tim] · Fitri, Amri, Noval · SMK Negeri 1 Sorong
+**Lomba:** Perancangan dan Pengembangan Aplikasi Berbasis Web Berbantuan AI, 2026
 
-## Isi kit
+**Aplikasi:** https://nightevilesport01-ai.github.io/jejak-pkl/web/
+**Video tutorial:** [ISI link YouTube] · **Poster:** [ISI nama berkas]
 
-```
-starter-kit-lomba-ai/
-├── README.md                  ← yang sedang kalian baca
-├── MATERI-SISWA.md            ← MATERI LENGKAP SESI (baca ini dulu)
-├── PRD.md                     ← ISI PALING DULU: kebutuhan aplikasi kalian
-├── AGENTS.md                  ← aturan main buat AI (tempel ke AI di awal)
-├── CLAUDE.md                  ← penghubung untuk Claude Code (mengambil isi AGENTS.md)
-├── docs/
-│   ├── WORKFLOW.md            ← 7 langkah kerja bareng AI
-│   ├── BANK-PROMPT.md         ← kumpulan prompt siap pakai
-│   ├── CHECKLIST-KEAMANAN.md  ← cek dulu sebelum dikumpulkan
-│   ├── DEFINITION-OF-DONE.md  ← kapan fitur dianggap "selesai"
-│   ├── PANDUAN-GITHUB.md      ← upload kode & online-kan gratis
-│   ├── PANDUAN-SUPABASE.md    ← database + login gratis, langkah demi langkah
-│   └── PANDUAN-PRESENTASI.md  ← demo 10 menit, video, manual, poster
-├── contoh/
-│   ├── PRD-contoh-absenku.md
-│   └── PRD-contoh-pinjamlab.md
-├── demo-live/                ← PANDUAN DEMO LIVE + prompt siap Copy (untuk pemateri & latihan)
-├── demo-absen/                ← DEMO 1: AbsenKu, absen siswa TANPA database (bisa offline)
-└── demo-app/                  ← DEMO 2: PinjamLab, pinjam alat lab DENGAN database Supabase
-```
+## Masalah yang diselesaikan
+Dari wawancara dengan guru pembimbing PKL dan formulir resmi sekolah:
+- Sertifikat, raport, dan lembar penilaian PKL sering hilang, dan siswa tidak tahu di mana menyimpannya.
+- Guru membimbing 7 sampai belasan siswa yang sebagian PKL jauh dari sekolah, sehingga sulit memantau kehadiran dan keaktifan mereka.
+- Siswa menulis ulang absen dan jurnal ketika menyusun laporan PKL.
 
-## Dua aplikasi demo
+## Solusi
+Siswa mencatat sekali, lalu datanya dipakai ulang: untuk pantauan guru, perkembangan, arsip, dan dokumen cetak.
 
-| | Demo 1: `demo-absen/` (AbsenKu) | Demo 2: `demo-app/` (PinjamLab) |
+**Alur:** Kehadiran → Jurnal refleksi → Foto dan dokumen → Tanggapan guru → Perkembangan → Cetak Daftar Hadir, Daftar Kegiatan Harian, dan Laporan PKL.
+
+## Fitur yang sudah berjalan
+**Siswa**
+- Login, check-in dan check-out (jam masuk dan pulang dicatat server), izin dan sakit dengan alasan. Jam ditampilkan sesuai zona waktu tempat PKL (WIT, WITA, atau WIB).
+- **Jurnal refleksi:** tanggal, judul, unit kerja, apa yang dikerjakan, apa yang dipelajari, yang belum dipahami, bagian paling menarik, bagian paling sulit, tingkat pemahaman, ingin belajar lebih lanjut, perasaan, meneruskan pertanyaan ke guru, dan foto (maksimal 5, dikecilkan otomatis).
+- **Bukti & Arsip PKL:** foto kegiatan per tanggal, serta dokumen (sertifikat, raport, lembar penilaian, surat, bukti kegiatan, laporan) dalam bentuk foto atau PDF. Bersifat privat.
+- **Perkembangan:** jurnal per minggu, komposisi tingkat pemahaman, daftar yang belum dipahami dan paling sulit, rekap kehadiran.
+- **Cetak dokumen:** Daftar Hadir dan Daftar Kegiatan Harian dalam format sekolah, dengan kotak tanda tangan.
+- **Kirim kabar ke orang tua:** setelah check-in, check-out, izin, atau sakit, siswa bisa membuka WhatsApp dengan pesan siap kirim. Siswa memilih sendiri kontaknya, dan JEJAK tidak menyimpan nomor orang tua.
+- **Portofolio ringkas:** satu halaman A4 berisi tentang saya, capaian, keterampilan, hingga 4 kegiatan unggulan (dipilih dari jurnal, lengkap dengan foto), dan daftar dokumen pendukung, siap dicetak atau disimpan sebagai PDF. Bersifat privat, tanpa tautan publik.
+- **Laporan PKL:** mengisi bagian laporan (kata pengantar, Bab I, Bab II, Bab III), menyisipkan foto dan tabel, lalu cetak PDF atau unduh Word (.docx) sesuai format sekolah.
+
+**Guru pembimbing**
+- Dashboard siswa bimbingan: hadir hari ini (jam masuk dan pulang), jumlah jurnal 7 hari terakhir, pertanyaan yang belum dijawab.
+- Detail siswa: kehadiran, jurnal beserta kotak tanggapan, filter "perlu ditanggapi", foto kegiatan, dokumen (hanya lihat), halaman perkembangan, dan pencatatan Alpa.
+
+**Admin:** akun dibuat lewat dashboard Supabase (tidak ada pendaftaran bebas). Halaman admin saat ini hanya menampilkan jumlah siswa.
+
+## Akun demo
+Semua akun di bawah ini hanya akun contoh untuk penjurian, bukan akun asli.
+
+| Peran | Email | Password |
 |---|---|---|
-| Database | Tidak ada, data di browser | Supabase (gratis) |
-| Login | Tidak ada | Ada |
-| Butuh internet | Tidak | Ya |
-| Cocok untuk | Pemula, demo cadangan | Aplikasi yang dipakai banyak guru |
+| Admin | admin.jejak@example.com | JejakDemo#2026 |
+| Guru 1 | guru1.jejak@example.com | JejakDemo#2026 |
+| Guru 2 | guru2.jejak@example.com | JejakDemo#2026 |
+| Siswa 1 | siswa1.jejak@example.com | JejakDemo#2026 |
+| Siswa 2 | siswa2.jejak@example.com | JejakDemo#2026 |
 
-Coba langsung (setelah GitHub Pages aktif):
-- AbsenKu: https://mdts121220.github.io/starter-kit-lomba-ai/demo-absen/
-- PinjamLab: https://mdts121220.github.io/starter-kit-lomba-ai/demo-app/
+Siswa 1 dibimbing Guru 1, dan Siswa 2 dibimbing Guru 2. Siswa 2 diatur memakai zona waktu WITA untuk memperlihatkan fitur zona waktu.
 
-## Mulai dalam 6 langkah
+## Teknologi
+- **Tampilan:** HTML, CSS, dan JavaScript murni (tanpa framework), dirancang untuk HP (360 px) dan laptop.
+- **Basis data dan login:** Supabase (PostgreSQL, Authentication, Storage, Row Level Security).
+- **Hosting:** GitHub Pages.
+- **Pustaka dari CDN:** `supabase-js` (koneksi) dan `docx` (unduh Word).
 
-1. **Download atau fork** kit ini, lalu bikin repository GitHub buat tim kalian.
-2. **Isi `PRD.md`** bareng tim. Ngobrol dulu dengan calon pengguna (guru, TU, petugas perpus). Langkah ini jangan dilewati.
-3. **Pilih teknologi** yang paling kalian kuasai, lalu tulis di `AGENTS.md` bagian *Stack*.
-4. **Mulai ngobrol dengan AI**: tempel `AGENTS.md` + `PRD.md`, lalu minta *rencana* dulu, belum kode. Lihat prompt #1 di `docs/BANK-PROMPT.md`.
-5. **Butuh database?** Pakai PHP + MySQL, atau Supabase yang gratis: ikuti `docs/PANDUAN-SUPABASE.md`.
-6. **Bikin per fitur**, coba, commit ke GitHub, ulangi. Sebelum dikumpulkan, jalankan `docs/CHECKLIST-KEAMANAN.md`.
+## Keamanan
+- **Row Level Security aktif di semua tabel.** Siswa hanya bisa membaca dan mengubah datanya sendiri, guru hanya siswa bimbingannya, dan orang tanpa login tidak bisa mengakses data.
+- Halaman dijaga per peran. Siswa yang membuka alamat halaman guru dialihkan kembali.
+- Kunci yang dipakai di aplikasi hanya kunci publik (`sb_publishable_`). Kunci rahasia tidak ada di repository.
+- Foto dan dokumen disimpan di penyimpanan **privat**, dibuka lewat tautan sementara (1 jam).
+- Teks yang diketik pengguna ditampilkan sebagai teks biasa (bukan kode), sehingga aman dari XSS.
+- Jam masuk dan pulang dicatat oleh server, dan siswa tidak bisa mengubah baris kehadirannya setelah tercatat.
 
-## Tools AI yang bisa dipakai gratis (September 2026)
+**Hasil uji:** SQL injection di login, XSS di judul jurnal, siswa membuka halaman guru dan admin, halaman tanpa login, guru membuka siswa guru lain, dan isi `config.js`. Semuanya lolos.
 
-| Jenis | Contoh | Dipakai buat |
-|---|---|---|
-| Chat AI | ChatGPT, Gemini, Claude, Copilot | Curah ide, PRD, rancang database, cari bug, dokumentasi |
-| App builder | Google AI Studio (mode *Build*) | Bikin contoh tampilan cepat dari prompt |
-| IDE + agen AI | Google Antigravity, VS Code + GitHub Copilot | Ngoding satu proyek penuh bareng AI |
-| Agen di terminal | Codex CLI (ada di akun ChatGPT gratis, kuota kecil), Antigravity CLI | Level lanjut: AI membaca dan mengubah banyak file sendiri |
-| Berbayar (info saja) | Claude Code (perlu langganan Claude) | Tidak wajib |
+## Struktur repository
+- `web/`: seluruh halaman aplikasi.
+- `supabase/`: berkas SQL basis data. Jalankan berurutan di SQL Editor Supabase (tab query baru untuk tiap berkas):
+  1. `schema-jejak-1.sql`: 6 tabel awal dan RLS aktif
+  2. `schema-jejak-2-akun.sql`: nama dan peran akun contoh (setelah akun dibuat di menu Authentication)
+  3. `schema-jejak-3-rls.sql`: aturan akses tiap peran
+  4. `schema-jejak-4-kehadiran.sql`: jam pulang
+  5. `schema-jejak-5-zona-waktu.sql`: zona waktu per siswa
+  6. `schema-jejak-6-foto.sql`: penyimpanan foto kegiatan
+  7. `schema-jejak-7-dokumen.sql`: arsip dokumen
+  8. `schema-jejak-8-dokumen-guru.sql`: guru boleh melihat dokumen
+  9. `schema-jejak-9-jadwal.sql`: jadwal kerja dan status libur
+  10. `schema-jejak-10-laporan.sql`: isi laporan dan kode program keahlian
+  11. `schema-jejak-11-portofolio.sql`: portofolio ringkas
+  - `uji-rls-1.sql`: uji cepat aturan akses.
 
-> Kuota gratis tiap tool bisa berubah kapan saja. Siapkan minimal **dua** tool cadangan.
+## Menjalankan sendiri
+1. Buat project di supabase.com (region Singapore).
+2. Buat akun di **Authentication → Users** (centang Auto Confirm User), lalu jalankan berkas SQL di atas sesuai urutan.
+3. Buka `web/config.js`, isi `SUPABASE_URL` dan kunci `sb_publishable_` dari project kamu.
+4. Unggah folder `web` ke GitHub dan aktifkan GitHub Pages (Settings → Pages → branch `main`).
 
-### Tiap tool beda nama filenya
-AI coding agent membaca file instruksi di folder utama proyek, tapi namanya beda-beda:
-- **AGENTS.md** → Codex, Antigravity, Copilot, dan banyak tool lain
-- **CLAUDE.md** → Claude Code (di kit ini isinya sudah mengambil AGENTS.md)
-- **Chat biasa** (ChatGPT/Gemini di web) → tidak bisa baca file, jadi **tempel isi AGENTS.md** di awal percakapan
+## Rencana pengembangan
+Belum dibuat, dan tidak dihitung sebagai fitur saat ini:
+- Tautan portofolio publik dengan persetujuan siswa dan orang tua (opt-in).
+- Badge keterampilan dari pembimbing industri (perlu peran dan akun industri).
+- Notifikasi kehadiran ke orang tua yang otomatis (WhatsApp Business API atau SMS). Saat ini siswa mengirim kabar sendiri lewat tombol WhatsApp.
+- Penanda hari tanpa catatan dan konfirmasi Alpa oleh guru.
+- Halaman admin lengkap (kelola siswa dan penempatan PKL).
+- Ringkasan dan draf laporan dengan AI, yang tetap diperiksa siswa.
 
-## Aturan emas
-1. **Kalian yang pegang kemudi, AI yang bantu.** Kode apa pun di aplikasi kalian harus bisa kalian jelaskan ke juri.
-2. **Satu prompt, satu fitur.** Jangan minta "buatkan aplikasi lengkap" sekaligus.
-3. **Commit setiap fitur yang sudah jalan.** Kalau AI merusak sesuatu, kalian masih bisa balik.
-4. **Jangan tempel data pribadi asli** (NISN, nomor HP) ke AI. Pakai data contoh saja.
-5. **Jujur soal AI.** Tulis di README tools AI apa saja yang dipakai dan untuk apa.
+## Tools AI yang digunakan
+- **Claude (Anthropic):** membantu merancang PRD, menyusun dan meninjau kode, membuat panduan langkah demi langkah, dan menulis dokumentasi.
+- **Canva:** [ISI jika dipakai] untuk poster.
+- Semua fitur diuji tim di perangkat sendiri, dengan data contoh (bukan data siswa asli).
+
+## Lisensi dan data
+Proyek lomba sekolah. Data di aplikasi demo adalah data contoh.
