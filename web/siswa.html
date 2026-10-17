@@ -6,6 +6,26 @@
 <meta name="theme-color" content="#1F6F5C">
 <title>Dashboard Siswa - JEJAK</title>
 <link rel="stylesheet" href="style.css">
+<style>
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 4px; }
+  .chip-s { border-radius:99px; padding:3px 11px; font-size:.82rem; font-weight:700; border:1px solid var(--bd, #cfd3d9); background:var(--bg, #fff); color:var(--fg, #1B2733); }
+  .kalender { display:grid; grid-template-columns:repeat(7, 1fr); gap:5px; max-width:340px; margin:8px 0 6px; }
+  .kalender .hd { font-size:.72rem; color:var(--redup); text-align:center; }
+  .sel { aspect-ratio:1; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; border:1px solid var(--bd, var(--garis)); background:var(--bg, #fff); color:var(--fg, var(--redup)); }
+  .sel.H, .lg.H, .chip-s.H { --bg:#1F6F5C; --fg:#fff; --bd:#1F6F5C; }
+  .sel.I, .lg.I, .chip-s.I { --bg:#F6D98B; --fg:#5c4400; --bd:#E3BE5C; }
+  .sel.S, .lg.S, .chip-s.S { --bg:#BFDDF0; --fg:#164a6b; --bd:#8dbfdc; }
+  .sel.A, .lg.A, .chip-s.A { --bg:#F3B9B4; --fg:#8a1f17; --bd:#e08c85; }
+  .sel.L, .lg.L, .chip-s.L { --bg:#E5E7EB; --fg:#555; --bd:#cfd3d9; }
+  .sel.belum { border-style:dashed; border-color:#9aa7b2; font-weight:400; }
+  .sel.bukan { border-color:transparent; background:transparent; font-weight:400; opacity:.5; }
+  .sel.depan { opacity:.4; font-weight:400; }
+  .sel.ini { outline:2px solid #17564A; outline-offset:1px; }
+  .legenda { display:flex; flex-wrap:wrap; gap:6px 12px; font-size:.78rem; color:var(--redup); margin-top:4px; }
+  .lg { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:4px; vertical-align:-1px; border:1px solid var(--bd, #cfd3d9); background:var(--bg, #fff); }
+  .lg.belum { border-style:dashed; border-color:#9aa7b2; }
+  details summary { cursor:pointer; font-weight:600; color:var(--aksen); margin-top:10px; }
+</style>
 </head>
 <body>
 <header><a class="merek" href="#" aria-label="JEJAK"><b>JEJAK</b></a><span class="pengguna"><span class="avatar" id="avatar" aria-hidden="true"></span><span class="sapa"><span class="halo">Halo, </span><span id="nama"></span></span><button class="keluar" onclick="keluar()">Keluar <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/></svg></button></span></header>
@@ -24,17 +44,21 @@
 
   <div class="kartu">
     <b>Riwayat kehadiran</b>
-    <ul id="riwayat"></ul>
+    <div id="ringkas-hadir" class="chips"></div>
+    <div id="kalender" class="kalender" aria-label="Kalender kehadiran 4 minggu terakhir"></div>
+    <div class="legenda">
+      <span><i class="lg H"></i>H Hadir</span><span><i class="lg I"></i>I Izin</span><span><i class="lg S"></i>S Sakit</span>
+      <span><i class="lg A"></i>A Alpa</span><span><i class="lg L"></i>L Libur</span><span><i class="lg belum"></i>Belum ada catatan</span>
+    </div>
+    <details><summary>Lihat rincian 14 hari terakhir</summary><ul id="riwayat"></ul></details>
   </div>
   </div>
 
   <div class="menu-grid">
     <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 8h7M8 12h7"/></svg></span><div><b>Jurnal kegiatan</b><p class="redup">Catat kegiatan dan refleksi harianmu.</p><a class="tombol" href="jurnal.html">Isi dan lihat jurnal</a></div></div>
     <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><div><b>Bukti &amp; Arsip PKL</b><p class="redup">Foto kegiatan, sertifikat, raport, lembar penilaian, dan dokumen PKL lainnya.</p><a class="tombol" href="arsip.html">Buka arsip</a><a class="tombol sekunder" href="arsip.html#dokumen">Tambah dokumen</a></div></div>
-    <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg></span><div><b>Cetak dokumen</b><p class="redup">Daftar Hadir dan Daftar Kegiatan Harian dalam format sekolah, siap ditandatangani.</p><a class="tombol" href="cetak.html">Buka cetak dokumen</a></div></div>
     <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-7M22 20H2"/></svg></span><div><b>Perkembangan</b><p class="redup">Lihat jurnal per minggu, tingkat pemahaman, dan rekap kehadiranmu.</p><a class="tombol" href="perkembangan.html">Lihat perkembangan</a></div></div>
-    <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg></span><div><b>Laporan PKL</b><p class="redup">Tulis bagian laporan sesuai format sekolah. Bagian lain terisi otomatis dari jurnalmu.</p><a class="tombol" href="laporan.html">Isi laporan</a><a class="tombol sekunder" href="laporan-cetak.html">Lihat dan cetak laporan</a></div></div>
-    <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/></svg></span><div><b>Portofolio</b><p class="redup">Satu halaman ringkasan PKL untuk melamar magang, kerja, atau kuliah.</p><a class="tombol" href="portofolio.html">Buat portofolio</a></div></div>
+    <div class="kartu menu"><span class="ikon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg></span><div><b>Dokumen &amp; laporan</b><p class="redup">Cetak dokumen sekolah, susun laporan PKL, dan buat portofolio.</p><a class="tombol sekunder" href="cetak.html">Cetak dokumen</a><a class="tombol sekunder" href="laporan.html">Isi laporan</a><a class="tombol sekunder" href="laporan-cetak.html">Cetak laporan</a><a class="tombol sekunder" href="portofolio.html">Portofolio</a></div></div>
   </div>
 </main>
 <footer class="kaki">JEJAK &middot; SMK Negeri 1 Sorong</footer>
@@ -45,7 +69,7 @@
 const WIT = "Asia/Jayapura"; // tanggal "hari ini" mengikuti aturan database (WIT)
 const LABEL = { "Asia/Jayapura": "WIT", "Asia/Makassar": "WITA", "Asia/Jakarta": "WIB" };
 let zona = WIT; // zona waktu tempat PKL siswa, diisi dari data siswa
-let siswaId = null, namaSiswa = "", perusahaan = "tempat PKL";
+let siswaId = null, namaSiswa = "", perusahaan = "tempat PKL", jadwalKerja = "senin_jumat", mulaiPKL = null, akhirPKL = null;
 
 // Format tampilan: "Rab, 7 Okt" dan "07.30"
 const tgl = d => new Date(d + "T00:00:00").toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" });
@@ -111,15 +135,54 @@ function tombolKabar(h) {
 }
 
 // Ambil riwayat 14 hari terakhir, lalu tampilkan status dan tombol yang sesuai
+const HARI_KERJA = { senin_jumat: [1, 2, 3, 4, 5], senin_sabtu: [1, 2, 3, 4, 5, 6], setiap_hari: [0, 1, 2, 3, 4, 5, 6] };
+const HURUF = { hadir: "H", izin: "I", sakit: "S", alpa: "A", libur: "L" };
+const NAMA_STATUS = { hadir: "Hadir", izin: "Izin", sakit: "Sakit", alpa: "Alpa", libur: "Libur" };
+function tambahHari(iso, n) { const d = new Date(iso + "T00:00:00"); d.setDate(d.getDate() + n); return d.toLocaleDateString("sv-SE"); }
+
+// Ringkasan angka dan kalender 4 minggu terakhir (Senin sampai Minggu)
+function gambarKehadiran(semua) {
+  const chips = document.getElementById("ringkas-hadir");
+  chips.textContent = "";
+  ["hadir", "izin", "sakit", "alpa"].forEach(k => {
+    const c = document.createElement("span");
+    c.className = "chip-s " + HURUF[k];
+    c.textContent = NAMA_STATUS[k] + " " + semua.filter(r => r.status === k).length;
+    chips.appendChild(c);
+  });
+  const peta = {};
+  semua.forEach(r => { peta[r.attendance_date] = r; });
+  const hari = hariIniWIT();
+  const senin = tambahHari(hari, -((new Date(hari + "T00:00:00").getDay() + 6) % 7));
+  const awal = tambahHari(senin, -21);
+  const kerja = HARI_KERJA[jadwalKerja] || HARI_KERJA.senin_jumat;
+  const kal = document.getElementById("kalender");
+  kal.textContent = "";
+  ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].forEach(n => { const h = document.createElement("div"); h.className = "hd"; h.textContent = n; kal.appendChild(h); });
+  for (let i = 0; i < 28; i++) {
+    const t = tambahHari(awal, i), r = peta[t], c = document.createElement("div");
+    const dalamPKL = (!mulaiPKL || t >= mulaiPKL) && (!akhirPKL || t <= akhirPKL);
+    let kelas = "sel", teks = String(Number(t.slice(8))), ket = tgl(t);
+    if (r) { kelas += " " + HURUF[r.status]; teks = HURUF[r.status]; ket += ": " + NAMA_STATUS[r.status].toLowerCase() + (r.check_in ? ", masuk " + jam(r.check_in) : "") + (r.check_out ? ", pulang " + jam(r.check_out) : ""); }
+    else if (t > hari) kelas += " depan";
+    else if (kerja.includes(new Date(t + "T00:00:00").getDay()) && dalamPKL) { kelas += " belum"; ket += ": belum ada catatan"; }
+    else kelas += " bukan";
+    if (t === hari) kelas += " ini";
+    c.className = kelas; c.textContent = teks; c.title = ket; c.setAttribute("aria-label", ket);
+    kal.appendChild(c);
+  }
+}
+
 async function muat() {
   const { data, error } = await db.from("attendance")
     .select("attendance_date, status, reason, check_in, check_out")
-    .order("attendance_date", { ascending: false }).limit(14);
+    .order("attendance_date", { ascending: false }).limit(400);
   if (error) { pesan("Kehadiran belum bisa dimuat: " + error.message); return; }
 
   const ul = document.getElementById("riwayat");
   ul.textContent = "";
-  data.forEach(r => {
+  gambarKehadiran(data);
+  data.slice(0, 14).forEach(r => {
     const li = document.createElement("li");
     li.textContent = tgl(r.attendance_date) + ": " + r.status + " (masuk " + jam(r.check_in) + ", pulang " + jam(r.check_out) + ")";
     ul.appendChild(li);
@@ -164,12 +227,13 @@ async function muat() {
   if (!profil) return;
   namaSiswa = profil.full_name;
   const { data, error } = await db.from("students")
-    .select("id, nis, class_name, company_name, industry_supervisor, zona_waktu").single();
+    .select("id, nis, class_name, company_name, industry_supervisor, zona_waktu, jadwal_kerja, pkl_start_date, pkl_end_date").single();
   const el = document.getElementById("info");
   if (error) { el.textContent = "Data belum bisa dimuat: " + error.message; return; }
   siswaId = data.id;
   perusahaan = data.company_name || perusahaan;
   zona = data.zona_waktu || WIT;
+  jadwalKerja = data.jadwal_kerja || jadwalKerja; mulaiPKL = data.pkl_start_date; akhirPKL = data.pkl_end_date;
   el.textContent = "NIS " + data.nis + ", kelas " + data.class_name + ". PKL di " + data.company_name + " (pembimbing industri: " + data.industry_supervisor + ").";
   await muat();
 })();
